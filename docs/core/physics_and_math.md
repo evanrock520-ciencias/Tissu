@@ -24,14 +24,20 @@ Which gives acceleration: $$a = \frac{F}{m}$$
 ## Verlet Integration
 
 Verlet Integration is a numerical method used to integrate Newton's equations of motion. We consider the previous and the actual position to approximate the particle's velocity. 
+By using the next one equation we update the particle's position each frame.  
 
+$$x_{n+1} = 2x_n - x_{n-1} + a_n\Delta t²$$
+
+Verlet integration is widely used in computer graphics due to its excellent cost-to-benefit ratio. While Euler integration is prone to instability and Runge-Kutta (RK4) is computationally expensive, Verlet offers a stable and efficient middle ground. It is particularly effective for simulating physics with constraints, such as cloth or ragdolls.
 
 ## XPBD 
 
 ### Distance Constraint
-
+‚
 ### Dihedral Bending Constraint
 
 ## Colliders
+
+## Forces
 
 
