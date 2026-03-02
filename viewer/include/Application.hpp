@@ -48,6 +48,7 @@ public:
     inline void setWorld(std::shared_ptr<World> world) { m_world = world; }
     inline void setSolver(std::shared_ptr<Solver> solver) { m_solver = solver; }
     inline void setMesh(std::shared_ptr<ClothMesh> mesh) { m_mesh = mesh; }
+    void setAeroForce(std::shared_ptr<AerodynamicForce> force) { m_aeroForce = force; }
     inline void setCloth(std::shared_ptr<Cloth> cloth) { 
         m_cloth = cloth;
         m_initRows = cloth->getRows();
@@ -71,6 +72,7 @@ private:
     std::shared_ptr<ClothMesh> m_mesh; 
     std::shared_ptr<Cloth> m_cloth;
     std::shared_ptr<ClothMaterial> cloth_material;
+    std::shared_ptr<AerodynamicForce> m_aeroForce;
     double m_deltaTime;
     double m_lastFrame;
 

@@ -38,11 +38,10 @@ public:
 
     void apply(std::vector<Particle>& particles, double dt) override;
 
-    inline void setWind(const Eigen::Vector3d& wind);
-    inline const Eigen::Vector3d& getWind() const;
-
-    inline void setAirDensity(double density);
-    inline double getAirDensity() const;
+    inline void setWind(const Eigen::Vector3d& wind) { m_wind = wind; }
+    inline const Eigen::Vector3d& getWind() const { return m_wind; }
+    inline void setAirDensity(double density) { m_airDensity = density; }
+    inline double getAirDensity() const { return m_airDensity; }
     inline void setFaces(AeroFace face) { m_faces.push_back(face); }
 
 private:

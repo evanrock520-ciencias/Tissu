@@ -162,7 +162,10 @@ bool Application::init(int width, int height, const std::string& title, const st
     int bufferWidth, bufferHeight;
     glfwGetFramebufferSize(m_window, &bufferWidth, &bufferHeight);
 
-    m_camera = std::make_unique<Camera>(Eigen::Vector3f(0, 5, 10), Eigen::Vector3f(0, 2, 0));
+    m_camera = std::make_unique<Camera>(
+        Eigen::Vector3f(1.0f, 1.0f, 5.0f),  
+        Eigen::Vector3f(1.0f, 1.0f, 0.0f)  
+    );
     
     if (bufferHeight > 0) {
         m_camera->setAspectRatio(static_cast<float>(bufferWidth) / static_cast<float>(bufferHeight));
@@ -229,7 +232,7 @@ void Application::processInput() {
 
 void Application::update() {
     if (!m_isPaused)
-        m_solver->update(*m_world, m_deltaTime);
+        m_solver->update(*m_world, 1.0/60.0);
 }
 
 void Application::render() {
@@ -317,9 +320,12 @@ void Application::drawUI() {
             }
 
             if (windEnabled) {
-                m_world->setWind(dir * windStrength);
+                Eigen::Vector3d wind = dir * windStrength;
+                m_world->setWind(wind);
+                if (m_aeroForce) m_aeroForce->setWind(wind);
             } else {
                 m_world->setWind(Eigen::Vector3d::Zero());
+                if (m_aeroForce) m_aeroForce->setWind(Eigen::Vector3d::Zero());
             }
         }
     }
@@ -328,19 +334,9 @@ void Application::drawUI() {
 }
 
 void Application::resetSimulation() {
-    m_solver->clear();
-
-    float spacing = (m_initSpacing > 0.0f) ? m_initSpacing : 0.1f;
-    auto currentMat = m_cloth->getMaterial(); 
-
-    m_cloth->clear(); 
-    m_cloth->setGridDimensions(m_initRows, m_initCols);
-
-    m_mesh->initGrid(m_initRows, m_initCols, m_initSpacing, *m_cloth, *m_solver);
-    
+    m_solver->softReset();
     syncVisualTopology();
-    
-    Logger::info("Simulation Reset (Grid: " + std::to_string(m_initRows) + "x" + std::to_string(m_initCols) + ")");
+    Logger::info("Simulation reset to initial state.");
 }
 
 void Application::syncVisualTopology() {

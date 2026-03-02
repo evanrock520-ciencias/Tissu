@@ -26,7 +26,7 @@ class Particle;
  * @class Collider
  * @brief Base interface for all geometric collision objects.
  * 
- * Colliders in this engine follow the Position Based Dynamics (PBD) approach. 
+ * Colliders in this engine follow the Extended Position Based Dynamics (XPBD) approach. 
  * Instead of calculating complex contact forces, they project penetrating 
  * particles back to the surface of the object and modify their implicit 
  * velocity via friction.

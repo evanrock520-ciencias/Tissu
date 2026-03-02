@@ -62,13 +62,22 @@ namespace ClothSDK {
 
     int Solver::addParticle(const Particle& particle) {
         m_particles.push_back(particle);
+        m_initialPositions.push_back(particle.getPosition());
         return static_cast<int>(m_particles.size() - 1);
+    }
+
+    void Solver::softReset() {
+        for (int i = 0; i < (int)m_particles.size(); i++) {
+            m_particles[i].setPosition(m_initialPositions[i]);
+            m_particles[i].setOldPosition(m_initialPositions[i]);
+        }
     }
 
     void Solver::clear() {
         m_particles.clear();
         m_constraints.clear();
         m_adjacencies.clear();
+        m_initialPositions.clear();
     }
 
     const std::vector<Particle>& Solver::getParticles() const {
@@ -141,6 +150,9 @@ namespace ClothSDK {
 
                     pA.setPosition(pA.getPosition() + corr * wA);
                     pB.setPosition(pB.getPosition() - corr * wB);
+
+                    pA.setOldPosition(pA.getPosition());
+                    pB.setOldPosition(pB.getPosition());        
                 }
             }
         }

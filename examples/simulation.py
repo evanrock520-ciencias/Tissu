@@ -23,14 +23,18 @@ def falling():
 
     curtain = Fabric.grid(
         name="Curtain",
-        rows=100,
-        cols=100,
+        rows=40,
+        cols=40,
         spacing=0.05,
         material=material,
         solver=sim.solver
     )
 
     sim.add_fabric(curtain)
+    curtain.pin_top_corners(solver=sim.solver, threshold=0.01, compliance=0)
+    particles = sim.solver.get_particles()
+    print(f"Particle 1560 invMass: {particles[1560].get_inverse_mass()}")
+    print(f"Particle 1599 invMass: {particles[1599].get_inverse_mass()}")
     Material.apply_preset(curtain, "silk")
     
     sim.view()

@@ -50,6 +50,8 @@ public:
     void addBendingConstraint(int a, int b, int c, int d, double restAngle, double compliance);
     void addPin(int id, const Eigen::Vector3d& pos, double compliance = 0.0);
 
+    void softReset();
+
     void update(World& world, double deltaTime);
 
 private:
@@ -64,6 +66,7 @@ private:
     std::vector<Particle> m_particles; 
     std::vector<std::unique_ptr<Constraint>> m_constraints;
     std::unordered_set<uint64_t> m_adjacencies;
+    std::vector<Eigen::Vector3d> m_initialPositions;
     
     SpatialHash m_spatialHash;
     std::vector<int> m_neighborsBuffer;

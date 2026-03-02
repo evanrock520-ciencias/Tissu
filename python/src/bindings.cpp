@@ -69,6 +69,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def(py::init<const Eigen::Vector3d&>(), py::arg("initial_pos"))
         .def("get_position", &Particle::getPosition)
         .def("set_position", &Particle::setPosition)
+        .def("set_old_position", &Particle::setOldPosition)
         .def("get_inverse_mass", &Particle::getInverseMass)
         .def("set_inverse_mass", &Particle::setInverseMass)
         .def("add_force", &Particle::addForce)
@@ -102,7 +103,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     .def("query", &SpatialHash::query, 
         py::arg("particles"), py::arg("pos"), py::arg("radius"), py::arg("out_neighbors"));
 
-    py::class_<World>(m, "World")
+    py::class_<World, std::shared_ptr<World>>(m, "World")
         .def(py::init<>())
         .def("add_cloth", &World::addCloth)
         .def("add_collider", &World::addCollider)
@@ -132,6 +133,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("add_distance_constraint", &Solver::addDistanceConstraint)
         .def("add_bending_constraint", &Solver::addBendingConstraint)
         .def("add_pin", &Solver::addPin)
+        .def("soft_reset", &Solver::softReset)
         .def("set_collision_compliance", &Solver::setCollisionCompliance);
 
     py::class_<ClothMesh, std::shared_ptr<ClothSDK::ClothMesh>>(m, "ClothMesh")
@@ -190,6 +192,8 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     .def("set_solver", &ClothSDK::Viewer::Application::setSolver, py::arg("solver"))
     .def("set_cloth", &ClothSDK::Viewer::Application::setCloth)
     .def("set_mesh", &ClothSDK::Viewer::Application::setMesh, py::arg("mesh"))
+    .def("set_aero_force", &ClothSDK::Viewer::Application::setAeroForce)
+    .def("set_world", &ClothSDK::Viewer::Application::setWorld)
     .def("get_renderer", &ClothSDK::Viewer::Application::getRenderer, 
         py::return_value_policy::reference_internal);    
 

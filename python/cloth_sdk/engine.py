@@ -184,6 +184,7 @@ class Simulation:
         shader_path = os.path.join(project_root, "viewer", "shaders", "")
         
         self.app.set_solver(self.solver)
+        self.app.set_world(self.world)
         
         if self.cloth_objects:
             first_cloth_name = list(self.cloth_objects.keys())[0]
@@ -192,6 +193,10 @@ class Simulation:
             
         sdk.Logger.info(f"Initializing OpenGL Viewer")
         sdk.Logger.info(f"Shader Path : {shader_path}")
+        
+        if self._aero_forces:
+            first = list(self._aero_forces.values())[0]
+            self.app.set_aero_force(first)
         
         if not self.app.init(width, height, title, shader_path):
             sdk.Logger.error("Failed to initialize the viewer.")
