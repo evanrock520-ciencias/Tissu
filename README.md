@@ -20,8 +20,8 @@ By combining a high-performance **C++ core** with flexible **Python bindings**, 
 Clone the repositorie is as simple as
 
 ```bash
-git clone https://github.com/evanrock520-ciencias/ClothSDK.git
-cd ClothSDK 
+git clone https://github.com/evanrock520-ciencias/Tissu.git
+cd Tissu
 ```
 
 ### 2. Compile the SDK
