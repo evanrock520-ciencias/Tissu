@@ -21,14 +21,43 @@
 
 namespace Tissu {
 
+/**
+ * @class GravityForce
+ * @brief Applies a constant gravitational acceleration to all dynamic particles.
+ *
+ * This is a uniform body force — every particle with a non-zero inverse mass
+ * receives the same acceleration vector regardless of its position.
+ * Pinned or static particles (inverse mass == 0.0) are automatically skipped.
+ *
+ * The standard Earth gravity vector is @f$ (0, -9.81, 0) @f$ m/s²,
+ * but any direction can be used to simulate non-standard environments
+ * such as zero-gravity or lateral pull.
+ */
 class GravityForce : public Force {
 public:
+    /**
+     * @brief Constructs a GravityForce with a given acceleration vector.
+     *
+     * @param gravity World-space acceleration vector in m/s².
+     *                Defaults to @f$ (0, -9.81, 0) @f$ in typical usage.
+     *                Pass @f$ (0, 0, 0) @f$ to disable gravity at runtime.
+     */
     explicit GravityForce(const Eigen::Vector3d& gravity)
         : m_gravity(gravity) {}
     
+    /**
+     * @brief Accumulates the gravitational acceleration into each dynamic particle.
+     *
+     * Iterates over the full particle buffer and calls @ref Particle::addForce
+     * with @ref m_gravity on every particle whose inverse mass is non-zero.
+     *
+     * @param particles Reference to the solver's global particle buffer.
+     * @param dt Current substep time delta in seconds.
+     */
     void apply(std::vector<Particle>& particles, double dt) override;
+
 private:
-    Eigen::Vector3d m_gravity;
+    Eigen::Vector3d m_gravity;      //< Constant gravitational acceleration vector in m/s².
 };
 
 }
