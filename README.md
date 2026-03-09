@@ -130,6 +130,14 @@ python3 -m examples.simulation
 
 ---
 
+## Viewer
+
+[Viewer](docs/videos/viewer.gif)
+
+>Note: Preview of a silk cloth.
+
+---
+
 ## 🎨 Blender Integration
 
 Since Tissu exports standard Alembic files, visualizing the result is straightforward:
