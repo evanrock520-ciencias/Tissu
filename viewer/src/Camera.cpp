@@ -9,6 +9,7 @@ namespace Viewer {
 
 static constexpr float PI = 3.1415926535f;
 static constexpr float RAD_TO_DEG = 180.0f / PI;
+static constexpr float DEG_TO_RAD = PI / 180.0f;
 
 Camera::Camera(Eigen::Vector3f position, Eigen::Vector3f target)
     : m_position(position), 
@@ -91,8 +92,8 @@ void Camera::handleZoom(float yoffset) {
 }
 
 void Camera::updateCameraVectors() {
-    float yaw_rad = m_yaw * RAD_TO_DEG;
-    float pitch_rad = m_pitch * RAD_TO_DEG;
+    float yaw_rad = m_yaw * DEG_TO_RAD;
+    float pitch_rad = m_pitch * DEG_TO_RAD;
 
     float cos_pitch = std::cos(pitch_rad);
     float y = m_distance * std::sin(pitch_rad);
