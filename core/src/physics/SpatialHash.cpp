@@ -6,7 +6,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace ClothSDK {
+namespace Tissu {
 
 SpatialHash::SpatialHash(int tableSize, double cellSize)
 : m_tableSize(tableSize), m_cellSize(cellSize) {}

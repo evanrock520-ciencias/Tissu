@@ -13,7 +13,7 @@
 #include <Eigen/Dense>
 #include <memory>
 
-namespace ClothSDK {
+namespace Tissu {
     Solver::Solver()
     : m_substeps(15), m_iterations(2), m_collisionCompliance(1e-9), m_spatialHash(10007, 0.08) {}
 

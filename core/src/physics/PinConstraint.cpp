@@ -6,7 +6,7 @@
 #include "physics/PinConstraint.hpp"
 #include "physics/Particle.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 PinConstraint::PinConstraint(int particleId, const Eigen::Vector3d& pinPosition, double compliance) : m_particleId(particleId), m_pinPos(pinPosition) { m_compliance = compliance; }
 

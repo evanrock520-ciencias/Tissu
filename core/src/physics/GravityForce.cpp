@@ -3,7 +3,7 @@
 
 #include "physics/GravityForce.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 void GravityForce::apply(std::vector<Particle>& particles, double dt) {
     #pragma omp parallel for

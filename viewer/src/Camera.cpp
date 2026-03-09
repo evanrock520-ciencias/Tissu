@@ -4,7 +4,7 @@
 #include "Camera.hpp"
 #include <cmath>
 
-namespace ClothSDK {
+namespace Tissu {
 namespace Viewer {
 
 static constexpr float PI = 3.1415926535f;

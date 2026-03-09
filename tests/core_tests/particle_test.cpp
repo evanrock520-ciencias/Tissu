@@ -2,7 +2,7 @@
 #include "physics/Particle.hpp"
 #include <Eigen/Dense>
 
-using namespace ClothSDK;
+using namespace Tissu;
 
 #define EXPECT_VECTOR3D_NEAR(v1, v2, tol) \
     EXPECT_NEAR(v1.x(), v2.x(), tol); \

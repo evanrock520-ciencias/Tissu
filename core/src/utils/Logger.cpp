@@ -4,7 +4,7 @@
 #include "utils/Logger.hpp"
 #include <iostream>
 
-namespace ClothSDK {
+namespace Tissu {
 
 void Logger::info(const std::string& message) {
     log("INFO", "\033[32m", message);
@@ -20,7 +20,7 @@ void Logger::error(const std::string& message) {
 
 void Logger::log(const std::string& level, const std::string& color, const std::string& message) {
     std::cout   << color                
-                << "[ClothSDK]"         
+                << "[Tissu]"         
                 << "[" << level << "] " 
                 << message              
                 << "\033[0m"          

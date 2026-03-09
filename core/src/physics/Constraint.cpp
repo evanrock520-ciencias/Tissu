@@ -3,6 +3,6 @@
 
 #include "physics/Constraint.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 }

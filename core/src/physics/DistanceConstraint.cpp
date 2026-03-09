@@ -3,7 +3,7 @@
 
 #include "physics/DistanceConstraint.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 DistanceConstraint::DistanceConstraint(int idA, int idB, double restLength, double compliance)
 : m_idA(idA), m_idB(idB), m_restLength(restLength), m_compliance(compliance) {}

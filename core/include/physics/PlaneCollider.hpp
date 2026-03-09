@@ -19,7 +19,7 @@
 #include "Collider.hpp"
 #include <Eigen/Dense>
 
-namespace ClothSDK {
+namespace Tissu {
 
 /**
  * @class PlaneCollider

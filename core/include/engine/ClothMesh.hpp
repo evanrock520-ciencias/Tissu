@@ -21,7 +21,7 @@
 #include <vector>
 #include <memory>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Solver;
 class Cloth; 

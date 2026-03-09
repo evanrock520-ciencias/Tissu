@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 
-namespace ClothSDK {
+namespace Tissu {
     class Solver;
     namespace Viewer {
         class Camera;
@@ -30,7 +30,7 @@ namespace ClothSDK {
             ~Renderer();
 
             bool init();
-            void render(const ClothSDK::Solver& solver, const Camera& camera);
+            void render(const Tissu::Solver& solver, const Camera& camera);
             void cleanup();
             void updateTopology();
 

@@ -5,7 +5,7 @@
 #include <cmath>
 #include <omp.h>
 
-namespace ClothSDK {
+namespace Tissu {
 
 AerodynamicForce::AerodynamicForce(
     const std::vector<AeroFace>& faces,

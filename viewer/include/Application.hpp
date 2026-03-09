@@ -24,7 +24,7 @@
 
 struct GLFWwindow;
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Solver;
 class ClothMesh;

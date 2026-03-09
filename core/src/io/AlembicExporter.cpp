@@ -8,7 +8,7 @@
 #include <Alembic/AbcCoreOgawa/All.h>
 #include <Alembic/Abc/ErrorHandler.h>
 
-namespace ClothSDK {
+namespace Tissu {
 
 using namespace Alembic::AbcGeom;
 

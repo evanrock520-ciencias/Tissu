@@ -9,7 +9,7 @@
 #include <iostream>
 #include <filesystem> 
 
-namespace ClothSDK {
+namespace Tissu {
 
 bool ConfigLoader::load(const std::string& filepath, Solver& solver, World& world, ClothMaterial& outMaterial) {
     std::cout << "[Debug] Attempting to load config: " << std::filesystem::absolute(filepath) << std::endl;

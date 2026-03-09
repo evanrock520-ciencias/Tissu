@@ -19,7 +19,7 @@
 #include "Particle.hpp"
 #include <vector>
 
-namespace ClothSDK {
+namespace Tissu {
 
 /**
  * @class Constraint

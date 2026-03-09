@@ -10,7 +10,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace ClothSDK {
+namespace Tissu {
 namespace Viewer {
 
 Renderer::Renderer() {}
@@ -45,7 +45,7 @@ bool Renderer::init() {
     return true;
 }
 
-void Renderer::render(const ClothSDK::Solver& solver, const Camera& camera) {
+void Renderer::render(const Tissu::Solver& solver, const Camera& camera) {
     const auto& particles = solver.getParticles();
     if (particles.empty()) return;
 

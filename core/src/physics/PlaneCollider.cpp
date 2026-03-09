@@ -4,7 +4,7 @@
 #include "physics/PlaneCollider.hpp"
 #include "physics/Particle.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 PlaneCollider::PlaneCollider(const Eigen::Vector3d& origin, const Eigen::Vector3d& normal, double friction) 
 : m_origin(origin), m_normal(normal.normalized()) {

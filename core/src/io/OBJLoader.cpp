@@ -7,7 +7,7 @@
 #include <tiny_obj_loader.h>
 #include <iostream>
 
-namespace ClothSDK {
+namespace Tissu {
 
 bool OBJLoader::load(const std::string& path, std::vector<Eigen::Vector3d>& outPos, std::vector<int>& outIndices) {
     tinyobj::attrib_t attrib;

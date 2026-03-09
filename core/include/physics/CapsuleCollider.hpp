@@ -18,7 +18,7 @@
 
 #include "physics/Collider.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 class CapsuleCollider : public Collider {
 public:

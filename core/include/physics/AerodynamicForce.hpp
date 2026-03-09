@@ -22,7 +22,7 @@
 #include "physics/Force.hpp"
 #include "physics/Particle.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 struct AeroFace {
     int a, b, c;

@@ -18,7 +18,7 @@
 
 #include <string>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Logger {
 public:

@@ -19,7 +19,7 @@
 #include <vector>
 #include <Eigen/Dense>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class OBJLoader {
 public:

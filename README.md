@@ -1,13 +1,13 @@
-# 🧵 ClothSDK
+# 🧵 Tissu
 
 ![Language](https://img.shields.io/badge/Language-C%2B%2B17-blue.svg)
 ![Language](https://img.shields.io/badge/Programming%20Language-Python-red)
 ![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)
 ![Physics](https://img.shields.io/badge/Physics-XPBD-green.svg)
 
-**ClothSDK** is a C++ cloth simulation SDK designed to integrate seamlessly into Digital Content Creation (DCC) tools such as Blender. It was developed to make high-fidelity cloth simulation as accessible as possible for technical artists and developers.
+**Tissu** is a C++ cloth simulation SDK designed to integrate seamlessly into Digital Content Creation (DCC) tools such as Blender. It was developed to make high-fidelity cloth simulation as accessible as possible for technical artists and developers.
 
-By combining a high-performance **C++ core** with flexible **Python bindings**, ClothSDK allows you to script complex simulations, define materials via JSON, and export results directly to Alembic (.abc).
+By combining a high-performance **C++ core** with flexible **Python bindings**, Tissu allows you to script complex simulations, define materials via JSON, and export results directly to Alembic (.abc).
 
 ![Blender Simulation](docs/videos/blender_cloth.gif)
 
@@ -132,7 +132,7 @@ python3 -m examples.simulation
 
 ## 🎨 Blender Integration
 
-Since ClothSDK exports standard Alembic files, visualizing the result is straightforward:
+Since Tissu exports standard Alembic files, visualizing the result is straightforward:
 
 1.  Run the Python script above to generate the `.abc` file.
 2.  Open **Blender**.

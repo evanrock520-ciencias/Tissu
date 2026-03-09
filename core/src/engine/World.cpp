@@ -5,7 +5,7 @@
 #include "physics/PlaneCollider.hpp"
 #include "physics/SphereCollider.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 World::World() : m_airDensity(0.1), m_gravity(0.0, -9.81, 0.0), m_thickness(0.02) {}
 

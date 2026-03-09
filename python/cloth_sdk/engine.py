@@ -175,7 +175,7 @@ class Simulation:
         sdk.Logger.info(f"Snapshot saved: {filename}")
         return True
     
-    def view(self, width=1280, height=720, title="ClothSDK | Live Simulation"):
+    def view(self, width=1280, height=720, title="Tissu | Live Simulation"):
         if not self.cloth_objects:
             sdk.Logger.warn("No cloth objects to visualize.")
             

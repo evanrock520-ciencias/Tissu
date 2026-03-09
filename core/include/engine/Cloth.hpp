@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace ClothSDK {
+namespace Tissu {
 
 enum class ClothTopology {
     Grid,

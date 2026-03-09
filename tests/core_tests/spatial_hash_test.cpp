@@ -3,7 +3,7 @@
 #include "physics/Particle.hpp"
 #include <vector>
 
-using namespace ClothSDK;
+using namespace Tissu;
 
 class SpatialHashTest : public ::testing::Test {
 protected:

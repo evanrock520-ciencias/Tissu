@@ -17,7 +17,7 @@
 #pragma once
 #include <vector>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Particle;
 

@@ -4,7 +4,7 @@
 #include "engine/Cloth.hpp"
 #include <memory>
 
-namespace ClothSDK {
+namespace Tissu {
 
     Cloth::Cloth(const std::string& name, std::shared_ptr<ClothMaterial> material) : m_name(name), m_material(material), m_gridCols(0), 
     m_gridRows(0), m_topology(ClothTopology::Mesh) {}

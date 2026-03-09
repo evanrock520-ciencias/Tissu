@@ -21,7 +21,7 @@
 #include <string>
 #include <Eigen/Dense>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Cloth;
 class Collider;

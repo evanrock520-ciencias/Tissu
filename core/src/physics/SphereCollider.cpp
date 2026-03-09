@@ -4,7 +4,7 @@
 #include "physics/SphereCollider.hpp"
 #include "physics/Particle.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 SphereCollider::SphereCollider(const Eigen::Vector3d& center, double radius, double friction)
     : m_center(center), m_radius(radius) 

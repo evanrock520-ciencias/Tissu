@@ -17,7 +17,7 @@
 #pragma once
 
 #include "physics/Constraint.hpp"
-namespace ClothSDK {
+namespace Tissu {
 
 class ContactConstraint : public Constraint {
 public:

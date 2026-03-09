@@ -3,7 +3,7 @@
 
 #include "physics/Particle.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 Particle::Particle(const Eigen::Vector3d& pos) : m_position(pos), m_oldPosition(pos), m_acceleration(Eigen::Vector3d::Zero()), inverseMass(1.0) {}
 

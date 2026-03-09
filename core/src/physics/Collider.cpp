@@ -3,6 +3,6 @@
 
 #include "physics/Collider.hpp"
 
-namespace ClothSDK {
+namespace Tissu {
 
 }

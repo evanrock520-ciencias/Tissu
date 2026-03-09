@@ -6,7 +6,7 @@
 #include "physics/Solver.hpp"
 #include <fstream>
 
-namespace ClothSDK {
+namespace Tissu {
 
 void OBJExporter::exportOBJ(const std::string &filename, const Cloth& cloth, const Solver &solver) {
     std::ofstream file(filename);

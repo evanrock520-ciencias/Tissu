@@ -2,7 +2,7 @@
 #include "physics/Solver.hpp"
 #include <Eigen/Dense>
 
-using namespace ClothSDK;
+using namespace Tissu;
 
 TEST(SolverTest, GravityAndSubsteps) {
     Solver solver;

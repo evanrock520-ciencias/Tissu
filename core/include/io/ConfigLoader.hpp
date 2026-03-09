@@ -24,7 +24,7 @@
 #include <Eigen/Dense>
 #include <fstream>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Solver;
 class ClothMesh;

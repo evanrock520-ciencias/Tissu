@@ -17,7 +17,7 @@
 #pragma once
 
 #include <string>
-namespace ClothSDK {
+namespace Tissu {
 
 class Solver;
 class Cloth;

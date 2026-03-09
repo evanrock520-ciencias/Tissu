@@ -1,6 +1,6 @@
 # Physics And Math
 
-This section describes the physical and mathematical foundations used in ClothSDK.
+This section describes the physical and mathematical foundations used in Tissu.
 The goal is not to be overly theoretical, but to explain the models and numerical methods clearly enough to understand the implementation and its limitations.
 
 ## Particle-Based Representation

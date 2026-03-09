@@ -25,7 +25,7 @@
 #include <memory>
 #include <Eigen/Dense>
 
-namespace ClothSDK {
+namespace Tissu {
 
 class Solver {
 public:

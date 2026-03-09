@@ -17,7 +17,7 @@
 
 #pragma once
 
-namespace ClothSDK {
+namespace Tissu {
 
 struct Triangle {
     int a, b, c;

@@ -25,7 +25,7 @@ extern IMGUI_IMPL_API void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, dou
 extern IMGUI_IMPL_API void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
 extern IMGUI_IMPL_API void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c);
 
-namespace ClothSDK {
+namespace Tissu {
 namespace Viewer {
 
 Application::Application() 
@@ -175,7 +175,7 @@ bool Application::init(int width, int height, const std::string& title, const st
     Logger::info("Window Size: " + std::to_string(width) + "x" + std::to_string(height));
     Logger::info("Framebuffer Size: " + std::to_string(bufferWidth) + "x" + std::to_string(bufferHeight));
     
-    Logger::info("ClothSDK Viewer initialized successfully: OpenGL 3.3 Core Profile");
+    Logger::info("Tissu Viewer initialized successfully: OpenGL 3.3 Core Profile");
     return true;
 }
 
@@ -254,7 +254,7 @@ void Application::shutdown() {
 }
 
 void Application::drawUI() {
-    ImGui::Begin("ClothSDK Control Panel", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin("Tissu Control Panel", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     if (ImGui::CollapsingHeader("Configuration IO", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::InputText("Config Path", m_configPathBuffer, sizeof(m_configPathBuffer));

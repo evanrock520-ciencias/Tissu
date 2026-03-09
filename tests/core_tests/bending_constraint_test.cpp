@@ -4,7 +4,7 @@
 #include <vector>
 #include <cmath>
 
-using namespace ClothSDK;
+using namespace Tissu;
 
 double calculateAngle(const Eigen::Vector3d& pA, const Eigen::Vector3d& pB, 
                       const Eigen::Vector3d& pC, const Eigen::Vector3d& pD) {

@@ -13,7 +13,7 @@ try:
     import _cloth_sdk_core
     from _cloth_sdk_core import *
 except ImportError as e:
-    print(f"[ClothSDK] Error: C++ backend not found in {build_dir}")
+    print(f"[Tissu] Error: C++ backend not found in {build_dir}")
     raise e
 
 from .engine import Simulation, Fabric, Material

@@ -32,10 +32,10 @@
 #include "io/AlembicExporter.hpp"
 
 namespace py = pybind11;
-using namespace ClothSDK;
+using namespace Tissu;
 
 PYBIND11_MODULE(_cloth_sdk_core, m) {
-    m.doc() = "ClothSDK: Professional XPBD Simulation Engine";
+    m.doc() = "Tissu: Professional XPBD Simulation Engine";
 
     py::class_<Triangle>(m, "Triangle")
         .def(py::init<int, int, int>(), py::arg("a"), py::arg("b"), py::arg("c"))
@@ -43,7 +43,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def_readwrite("b", &Triangle::b)
         .def_readwrite("c", &Triangle::c);
 
-    py::class_<ClothSDK::ClothMaterial, std::shared_ptr<ClothSDK::ClothMaterial>>(m, "ClothMaterial")
+    py::class_<Tissu::ClothMaterial, std::shared_ptr<Tissu::ClothMaterial>>(m, "ClothMaterial")
         .def(py::init<double, double, double, double>(),
             py::arg("density"), py::arg("structural"), py::arg("shear"), py::arg("bending"))
         .def_readwrite("density", &ClothMaterial::density)
@@ -51,18 +51,18 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def_readwrite("shear_compliance", &ClothMaterial::shearCompliance)
         .def_readwrite("bending_compliance", &ClothMaterial::bendingCompliance);
 
-    py::class_<ClothSDK::AeroFace>(m, "AeroFace")
+    py::class_<Tissu::AeroFace>(m, "AeroFace")
         .def(py::init<int, int, int>(), py::arg("a"), py::arg("b"), py::arg("c"))
         .def_readwrite("a", &AeroFace::a)
         .def_readwrite("b", &AeroFace::b)
         .def_readwrite("c", &AeroFace::c);
 
-    py::class_<ClothSDK::Force, std::shared_ptr<ClothSDK::Force>>(m, "Force");
+    py::class_<Tissu::Force, std::shared_ptr<Tissu::Force>>(m, "Force");
 
-    py::class_<ClothSDK::GravityForce, ClothSDK::Force, std::shared_ptr<ClothSDK::GravityForce>>(m, "GravityForce")
+    py::class_<Tissu::GravityForce, Tissu::Force, std::shared_ptr<Tissu::GravityForce>>(m, "GravityForce")
         .def(py::init<const Eigen::Vector3d&>());
 
-    py::class_<ClothSDK::AerodynamicForce, ClothSDK::Force, std::shared_ptr<ClothSDK::AerodynamicForce>>(m, "AerodynamicForce")
+    py::class_<Tissu::AerodynamicForce, Tissu::Force, std::shared_ptr<Tissu::AerodynamicForce>>(m, "AerodynamicForce")
         .def(py::init<const std::vector<AeroFace>&, const Eigen::Vector3d&, double>());
 
     py::class_<Particle>(m, "Particle")
@@ -120,7 +120,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("get_wind", &World::getWind)
         .def("get_air_density", &World::getAirDensity);
 
-    py::class_<Solver, std::shared_ptr<ClothSDK::Solver>>(m, "Solver")
+    py::class_<Solver, std::shared_ptr<Tissu::Solver>>(m, "Solver")
         .def(py::init<>())
         .def("update", &Solver::update, py::arg("world"), py::arg("delta_time"))
         .def("clear", &Solver::clear)
@@ -136,14 +136,14 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("soft_reset", &Solver::softReset)
         .def("set_collision_compliance", &Solver::setCollisionCompliance);
 
-    py::class_<ClothMesh, std::shared_ptr<ClothSDK::ClothMesh>>(m, "ClothMesh")
+    py::class_<ClothMesh, std::shared_ptr<Tissu::ClothMesh>>(m, "ClothMesh")
         .def(py::init<>())
         .def("init_grid", &ClothMesh::initGrid, 
             py::arg("rows"), py::arg("cols"), py::arg("spacing"), py::arg("out_cloth"), py::arg("solver"))
         .def("build_from_mesh", &ClothMesh::buildFromMesh, 
             py::arg("positions"), py::arg("indices"), py::arg("out_cloth"), py::arg("solver"));
 
-    py::class_<ClothSDK::Cloth, std::shared_ptr<ClothSDK::Cloth>>(m, "Cloth")
+    py::class_<Tissu::Cloth, std::shared_ptr<Tissu::Cloth>>(m, "Cloth")
         .def(py::init<const std::string&, std::shared_ptr<ClothMaterial>>(), 
             py::arg("name"), py::arg("material"))
         .def("get_name", &Cloth::getName)
@@ -164,7 +164,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def_static("load", [](const std::string& path) {
         std::vector<Eigen::Vector3d> pos;
         std::vector<int> indices;
-        bool success = ClothSDK::OBJLoader::load(path, pos, indices);
+        bool success = Tissu::OBJLoader::load(path, pos, indices);
         
         return std::make_tuple(success, pos, indices);
     });
@@ -178,30 +178,30 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     .def_static("warn", &Logger::warn, py::arg("message"))
     .def_static("error", &Logger::error, py::arg("message"));
 
-    py::class_<ClothSDK::Viewer::Renderer, std::unique_ptr<ClothSDK::Viewer::Renderer>>(m, "Renderer")
-    .def("set_shader_path", &ClothSDK::Viewer::Renderer::setShaderPath, 
+    py::class_<Tissu::Viewer::Renderer, std::unique_ptr<Tissu::Viewer::Renderer>>(m, "Renderer")
+    .def("set_shader_path", &Tissu::Viewer::Renderer::setShaderPath, 
         py::arg("path"), "Sets the directory where .vert and .frag files are located.");
 
     py::class_<Viewer::Application>(m, "Application")
     .def(py::init<>())
-    .def("init", &ClothSDK::Viewer::Application::init, 
+    .def("init", &Tissu::Viewer::Application::init, 
         py::arg("width"), py::arg("height"), py::arg("title"), py::arg("shader_path"))
-    .def("run", &ClothSDK::Viewer::Application::run)
-    .def("shutdown", &ClothSDK::Viewer::Application::shutdown)
-    .def("sync_visual_topology", &ClothSDK::Viewer::Application::syncVisualTopology)
-    .def("set_solver", &ClothSDK::Viewer::Application::setSolver, py::arg("solver"))
-    .def("set_cloth", &ClothSDK::Viewer::Application::setCloth)
-    .def("set_mesh", &ClothSDK::Viewer::Application::setMesh, py::arg("mesh"))
-    .def("set_aero_force", &ClothSDK::Viewer::Application::setAeroForce)
-    .def("set_world", &ClothSDK::Viewer::Application::setWorld)
-    .def("get_renderer", &ClothSDK::Viewer::Application::getRenderer, 
+    .def("run", &Tissu::Viewer::Application::run)
+    .def("shutdown", &Tissu::Viewer::Application::shutdown)
+    .def("sync_visual_topology", &Tissu::Viewer::Application::syncVisualTopology)
+    .def("set_solver", &Tissu::Viewer::Application::setSolver, py::arg("solver"))
+    .def("set_cloth", &Tissu::Viewer::Application::setCloth)
+    .def("set_mesh", &Tissu::Viewer::Application::setMesh, py::arg("mesh"))
+    .def("set_aero_force", &Tissu::Viewer::Application::setAeroForce)
+    .def("set_world", &Tissu::Viewer::Application::setWorld)
+    .def("get_renderer", &Tissu::Viewer::Application::getRenderer, 
         py::return_value_policy::reference_internal);    
 
-    py::class_<ClothSDK::AlembicExporter>(m, "AlembicExporter")
+    py::class_<Tissu::AlembicExporter>(m, "AlembicExporter")
     .def(py::init<>())
-    .def("open", &ClothSDK::AlembicExporter::open, py::arg("path"), py::arg("positions"), py::arg("indices"))
-    .def("write_frame", &ClothSDK::AlembicExporter::writeFrame, py::arg("positions"), py::arg("time"))
-    .def("close", &ClothSDK::AlembicExporter::close);
+    .def("open", &Tissu::AlembicExporter::open, py::arg("path"), py::arg("positions"), py::arg("indices"))
+    .def("write_frame", &Tissu::AlembicExporter::writeFrame, py::arg("positions"), py::arg("time"))
+    .def("close", &Tissu::AlembicExporter::close);
 
     py::class_<OBJExporter>(m, "OBJExporter")
     .def(py::init<>())

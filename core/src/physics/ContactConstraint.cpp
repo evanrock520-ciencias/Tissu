@@ -5,7 +5,7 @@
 #include "physics/Particle.hpp"
 #include <Eigen/Dense>
 
-namespace ClothSDK {
+namespace Tissu {
 
 ContactConstraint::ContactConstraint(int idA, int idB, double thickness, double compliance)
 : m_idA(idA), m_idB(idB), m_thickness(thickness) { m_compliance = compliance; }

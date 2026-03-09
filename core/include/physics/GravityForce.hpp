@@ -19,7 +19,7 @@
 
 #pragma once
 
-namespace ClothSDK {
+namespace Tissu {
 
 class GravityForce : public Force {
 public:

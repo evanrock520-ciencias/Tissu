@@ -11,7 +11,7 @@
 #include <map>
 #include <vector>
 
-namespace ClothSDK {
+namespace Tissu {
 
 void ClothMesh::initGrid(int rows, int cols, double spacing, Cloth& outCloth, Solver& solver) {
     std::vector<int> gridIndices;

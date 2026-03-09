@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace ClothSDK {
+namespace Tissu {
 
 BendingConstraint::BendingConstraint(
     int idA, int idB, int idC, int idD,

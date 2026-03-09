@@ -18,7 +18,7 @@
 
 #include <Eigen/Dense>
 
-namespace ClothSDK {
+namespace Tissu {
 
 /**
  * @class Particle
