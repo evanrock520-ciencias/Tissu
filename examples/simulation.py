@@ -23,8 +23,8 @@ def falling():
 
     curtain = Fabric.grid(
         name="Curtain",
-        rows=40,
-        cols=40,
+        rows=80,
+        cols=80,
         spacing=0.05,
         material=material,
         solver=sim.solver

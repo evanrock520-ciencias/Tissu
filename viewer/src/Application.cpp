@@ -8,6 +8,7 @@
 #include <imgui_impl_opengl3.h>
 #include <memory>
 #include <Eigen/Dense>
+#include <vector>
 
 #include "Application.hpp"
 #include "engine/Cloth.hpp"
@@ -345,8 +346,14 @@ void Application::syncVisualTopology() {
         return;
     }
 
-    const std::vector<unsigned int>& edges = m_cloth->getVisualEdges();
-    m_renderer->setIndices(edges);
+    std::vector<unsigned int> triangles;
+    for (const auto& tri : m_cloth->getTriangles()) {
+        triangles.push_back(tri.a);
+        triangles.push_back(tri.b);
+        triangles.push_back(tri.c);
+    }
+
+    m_renderer->setIndices(triangles);
     m_renderer->updateTopology();
 }
 

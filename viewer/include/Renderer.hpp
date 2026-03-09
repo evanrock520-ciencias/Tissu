@@ -30,6 +30,7 @@ namespace Tissu {
             ~Renderer();
 
             bool init();
+
             void render(const Tissu::Solver& solver, const Camera& camera);
             void cleanup();
             void updateTopology();
@@ -45,10 +46,10 @@ namespace Tissu {
             unsigned int m_vao = 0;
             unsigned int m_vbo = 0;
             unsigned int m_ebo = 0;
-            
-            std::vector<float> m_vertexBuffer; 
-            std::vector<unsigned int> m_indices;
 
+            std::vector<float> m_vertexBuffer;
+            std::vector<unsigned int> m_indices;
+            std::vector<Eigen::Vector3f> m_normals;
             std::string m_shaderPath = "../viewer/shaders/";
         };
     }

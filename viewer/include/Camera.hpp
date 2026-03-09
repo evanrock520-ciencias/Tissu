@@ -34,6 +34,8 @@ public:
 
     void inline setAspectRatio(float ratio) { m_aspectRatio = ratio; }
 
+    Eigen::Vector3f inline getPosition() const { return m_position; }
+
 private:
     void updateCameraVectors();
 
