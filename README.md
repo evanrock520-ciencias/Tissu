@@ -132,7 +132,7 @@ python3 -m examples.simulation
 
 ## Viewer
 
-[Viewer](docs/videos/viewer.gif)
+![Viewer](docs/videos/viewer.gif)
 
 >Note: Preview of a silk cloth.
 
