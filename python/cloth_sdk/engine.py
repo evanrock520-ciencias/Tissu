@@ -219,9 +219,17 @@ class Simulation:
         else:
             sdk.Logger.error("Failed to load config")
             
-    def save_config(self, filepath):
-        sdk.ConfigLoader.save(filepath)
-        sdk.Logger.info(f"Config saved: {filepath}")
+    def save_config(self, filepath, cloth_name=None):
+        if cloth_name and cloth_name in self.cloth_objects:
+            mat = self.cloth_objects[cloth_name].instance.get_material()
+        elif self.cloth_objects:
+            first = list(self.cloth_objects.values())[0]
+            mat = first.instance.get_material()
+        else:
+            sdk.Logger.error("No fabric to save config from.")
+            return False
+            
+        return sdk.ConfigLoader.save(filepath, self.solver, self.world, mat)
         
 class Fabric:
     def __init__(self, name, material):

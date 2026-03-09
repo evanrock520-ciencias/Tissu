@@ -40,7 +40,8 @@ Camera::Camera(Eigen::Vector3f position, Eigen::Vector3f target)
 Eigen::Matrix4f Camera::getProjectionMatrix() const {
     Eigen::Matrix4f projection = Eigen::Matrix4f::Zero();
 
-    float tanHalfFov = std::tan((m_fov * RAD_TO_DEG) / 2.0f);
+    float fovRad = m_fov * (PI / 180.0f);
+    float tanHalfFov = std::tan(fovRad / 2.0f);
 
     projection(0, 0) = 1.0f / (m_aspectRatio * tanHalfFov);
     projection(1, 1) = 1.0f / tanHalfFov;

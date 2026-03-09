@@ -23,8 +23,8 @@ def falling():
 
     curtain = Fabric.grid(
         name="Curtain",
-        rows=100,
-        cols=100,
+        rows=40,
+        cols=40,
         spacing=0.05,
         material=material,
         solver=sim.solver
@@ -34,12 +34,7 @@ def falling():
     curtain.pin_top_corners(solver=sim.solver, threshold=0.01, compliance=0)
     Material.apply_preset(curtain, "silk")
     
-    sim.bake_alembic(
-        filepath="data/animations/fall.abc",
-        start_frame=0,
-        end_frame=96,
-        fps=24
-    )
+    sim.view()
 
 if __name__ == "__main__":
     falling()

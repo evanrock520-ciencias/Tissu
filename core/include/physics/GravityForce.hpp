@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+#pragma once
+
 #include "physics/Force.hpp"
 #include "physics/Particle.hpp"
-
-#pragma once
 
 namespace Tissu {
 
