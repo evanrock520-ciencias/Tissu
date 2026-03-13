@@ -77,7 +77,6 @@ bool ConfigLoader::save(const std::string& filepath, const Solver& solver, const
     data["aerodynamics"]["air_density"] = world.getAirDensity();
     data["collisions"]["thickness"] = world.getThickness();
 
-    // Datos del Material
     data["material"]["density"] = material.density;
     data["material"]["compliance"]["structural"] = material.structuralCompliance;
     data["material"]["compliance"]["shear"] = material.shearCompliance;
