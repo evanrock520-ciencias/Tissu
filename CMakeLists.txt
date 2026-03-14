@@ -106,3 +106,4 @@ add_custom_target(_cloth_sdk_core_stubs ALL
 )
 
 enable_testing()
+add_subdirectory(tests)

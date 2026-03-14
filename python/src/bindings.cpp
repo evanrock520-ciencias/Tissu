@@ -44,12 +44,20 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def_readwrite("c", &Triangle::c);
 
     py::class_<Tissu::ClothMaterial, std::shared_ptr<Tissu::ClothMaterial>>(m, "ClothMaterial")
-        .def(py::init<double, double, double, double>(),
-            py::arg("density"), py::arg("structural"), py::arg("shear"), py::arg("bending"))
-        .def_readwrite("density", &ClothMaterial::density)
-        .def_readwrite("structural_compliance", &ClothMaterial::structuralCompliance)
-        .def_readwrite("shear_compliance", &ClothMaterial::shearCompliance)
-        .def_readwrite("bending_compliance", &ClothMaterial::bendingCompliance);
+    .def(py::init<double, double, double, double>(),
+        py::arg("density"), py::arg("structural"), py::arg("shear"), py::arg("bending"))
+    .def_property("density",
+        &ClothMaterial::getDensity,
+        &ClothMaterial::setDensity)
+    .def_property("structural_compliance",
+        &ClothMaterial::getStructuralCompliance,
+        &ClothMaterial::setStructuralCompliance)
+    .def_property("shear_compliance",
+        &ClothMaterial::getShearCompliance,
+        &ClothMaterial::setShearCompliance)
+    .def_property("bending_compliance",
+        &ClothMaterial::getBendingCompliance,
+        &ClothMaterial::setBendingCompliance);
 
     py::class_<Tissu::AeroFace>(m, "AeroFace")
         .def(py::init<int, int, int>(), py::arg("a"), py::arg("b"), py::arg("c"))

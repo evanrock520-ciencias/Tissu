@@ -17,10 +17,10 @@ void ClothMesh::initGrid(int rows, int cols, double spacing, Cloth& outCloth, So
     std::vector<int> gridIndices;
     gridIndices.reserve(rows * cols);   
     auto mat = outCloth.getMaterial();
-    double stComp = mat->structuralCompliance;
-    double shComp = mat->shearCompliance;
-    double beComp = mat->bendingCompliance;
-    double dens = mat->density;
+    double stComp = mat->getStructuralCompliance();
+    double shComp = mat->getShearCompliance();
+    double beComp = mat->getBendingCompliance();
+    double dens = mat->getDensity();
     outCloth.clear();
 
     outCloth.setTopology(ClothTopology::Grid);
@@ -85,10 +85,10 @@ void ClothMesh::buildFromMesh(const std::vector<Eigen::Vector3d>& positions, con
     outCloth.setTopology(ClothTopology::Mesh);
     outCloth.setGridDimensions(0, 0);
     auto mat = outCloth.getMaterial();
-    double stComp = mat->structuralCompliance;
-    double shComp = mat->shearCompliance;
-    double beComp = mat->bendingCompliance;
-    double dens = mat->density;
+    double stComp = mat->getStructuralCompliance();
+    double shComp = mat->getShearCompliance();
+    double beComp = mat->getBendingCompliance();
+    double dens = mat->getDensity();
 
 
     for (auto& position : positions) {
@@ -170,7 +170,7 @@ void ClothMesh::computePhysicalAttributes(Cloth& cloth, Solver& solver) const {
     const auto& particles = solver.getParticles();
     const auto& triangles = cloth.getTriangles();
     const auto& indices = cloth.getParticleIndices();
-    double density = cloth.getMaterial()->density;
+    double density = cloth.getMaterial()->getDensity();
 
     for(const auto& triangle : triangles) {
         const Particle& pA = particles[triangle.a];
