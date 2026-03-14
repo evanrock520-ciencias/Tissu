@@ -26,15 +26,17 @@ jobs:
             libpython3-dev \
             pybind11-dev \
             libomp-dev \
-            libx11-dev \
-            libxrandr-dev \
-            libxinerama-dev \
-            libxcursor-dev \
-            libxi-dev \
-            libgl1-mesa-dev \
             git
 
+      - name: Cache Alembic
+        uses: actions/cache@v4
+        id: cache-alembic
+        with:
+          path: /usr/local
+          key: alembic-1.8.6-${{ runner.os }}
+
       - name: Install Alembic from source
+        if: steps.cache-alembic.outputs.cache-hit != 'true'
         run: |
           git clone https://github.com/alembic/alembic.git
           cd alembic
@@ -42,16 +44,14 @@ jobs:
           mkdir build && cd build
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
-            -DUSE_TESTS=OFF \
-            -DALEMBIC_ILMBASE_LINK_STATIC=OFF
+            -DUSE_TESTS=OFF
           make -j$(nproc)
           sudo make install
           sudo ldconfig
 
       - name: Configure
         run: |
-          mkdir build
-          cd build
+          mkdir build && cd build
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DTISSU_BUILD_VIEWER=OFF
@@ -64,4 +64,4 @@ jobs:
       - name: Test
         run: |
           cd build
-          ./tests/unit_tests
+          ctest --output-on-failure
