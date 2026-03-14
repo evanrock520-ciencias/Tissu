@@ -26,6 +26,12 @@ jobs:
             libpython3-dev \
             pybind11-dev \
             libomp-dev \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
             git
 
       - name: Install Alembic from source
@@ -46,7 +52,9 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTISSU_BUILD_VIEWER=OFF
 
       - name: Build
         run: |

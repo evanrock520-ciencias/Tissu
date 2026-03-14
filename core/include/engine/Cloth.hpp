@@ -24,14 +24,53 @@
 
 namespace Tissu {
 
+/**
+ * @enum ClothTopology
+ * @brief Describes the construction method of a cloth object.
+ */
 enum class ClothTopology {
-    Grid,
-    Mesh
+    Grid, ///< Procedurally generated uniform grid via @ref ClothMesh::initGrid.
+    Mesh  ///< Topology loaded from a Wavefront OBJ file via @ref ClothMesh::buildFromMesh.
 };
 
+/**
+ * @class Cloth
+ * @brief Represents a simulated garment within the physics world.
+ *
+ * A Cloth holds the topology, material properties, and particle references
+ * that define a single piece of fabric. It does not own the particles —
+ * those live in the @ref Solver. The Cloth acts as a view over the solver's
+ * particle buffer, identifying which particles and constraints belong to it.
+ *
+ * Cloth objects are registered into a @ref World and updated each frame
+ * by the @ref Solver.
+ */
 class Cloth {
 public:
     Cloth(const std::string& name, std::shared_ptr<ClothMaterial> material);
+
+    /**
+     * @brief Returns the particle's ID using the rows and cols as parameters to search in the indice's buffer.
+     * 
+     * @param r The row of the particle.
+     * @param c The column of the particle.
+     * @return int The particle's ID.
+     */
+    inline int getParticleID(int r, int c) const { 
+        int localIndex = r * m_gridCols + c;
+        return m_particleIndices[localIndex];
+    }
+
+    /**
+     * @brief Clears the indices, triangles, and aerofaces buffers.
+     * 
+     */
+    void clear();
+
+    inline void addAeroFace(int a, int b, int c) { m_faces.push_back({a, b, c}); }
+    void addParticleId(int id);
+    void addTriangle(const Triangle& tri);
+    void addVisualEdge(unsigned int idA, unsigned int idB);
 
     void setName(const std::string& name);
     void setMaterial(std::shared_ptr<ClothMaterial> material);
@@ -44,22 +83,11 @@ public:
     inline const std::vector<int>& getParticleIndices() const { return m_particleIndices; }
     inline const std::vector<Triangle>& getTriangles() const { return m_triangles; }
     inline const std::vector<unsigned int>& getVisualEdges() const { return m_visualEdges; }
+    inline const std::vector<AeroFace>& getAeroFaces() const { return m_faces; }
     inline const int getRows() const { return m_gridRows; }
     inline const int getCols() const { return m_gridCols; }
-    inline void addAeroFace(int a, int b, int c) { m_faces.push_back({a, b, c}); }
-    inline const std::vector<AeroFace>& getAeroFaces() const { return m_faces; }
-    inline int getParticleID(int r, int c) const { 
-        int localIndex = r * m_gridCols + c;
-        return m_particleIndices[localIndex];
-    }
 
     bool isGrid() const { return m_topology == ClothTopology::Grid; }
-
-    void addParticleId(int id);
-    void addTriangle(const Triangle& tri);
-    void addVisualEdge(unsigned int idA, unsigned int idB);
-
-    void clear();
 
 private:
     std::string m_name;

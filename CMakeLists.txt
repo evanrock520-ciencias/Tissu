@@ -76,8 +76,13 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest eigen tinyobjloader json pybind11 glfw glad imgui)
 find_package(OpenMP REQUIRED)
 
+option(TISSU_BUILD_VIEWER "Build the OpenGL viewer" ON)
+
 add_subdirectory(core)
-add_subdirectory(viewer)
+
+if (TISSU_BUILD_VIEWER)
+  add_subdirectory(viewer)
+endif()
 
 pybind11_add_module(_cloth_sdk_core python/src/bindings.cpp)
 target_link_libraries(_cloth_sdk_core PRIVATE ClothCore ViewerCore)
