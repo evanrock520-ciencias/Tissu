@@ -38,10 +38,10 @@ bool ConfigLoader::load(const std::string& filepath, Solver& solver, World& worl
         auto mat = data["material"];
         auto comp = mat.value("compliance", nlohmann::json::object());
 
-        outMaterial.density = mat.value("density", 0.1);
-        outMaterial.structuralCompliance = comp.value("structural", 1e-6);
-        outMaterial.shearCompliance = comp.value("shear", 1e-6);
-        outMaterial.bendingCompliance = comp.value("bending", 1e-4);
+        outMaterial.setDensity(mat.value("density", 0.1));
+        outMaterial.setStructuralCompliance(comp.value("structural", 1e-6));
+        outMaterial.setShearCompliance(comp.value("shear", 1e-6));
+        outMaterial.setBendingCompliance(comp.value("bending", 1e-4));
     }
 
     if (data.contains("aerodynamics")) {
@@ -77,10 +77,10 @@ bool ConfigLoader::save(const std::string& filepath, const Solver& solver, const
     data["aerodynamics"]["air_density"] = world.getAirDensity();
     data["collisions"]["thickness"] = world.getThickness();
 
-    data["material"]["density"] = material.density;
-    data["material"]["compliance"]["structural"] = material.structuralCompliance;
-    data["material"]["compliance"]["shear"] = material.shearCompliance;
-    data["material"]["compliance"]["bending"] = material.bendingCompliance;
+    data["material"]["density"] = material.getDensity();
+    data["material"]["compliance"]["structural"] = material.getStructuralCompliance();
+    data["material"]["compliance"]["shear"] = material.getShearCompliance();
+    data["material"]["compliance"]["bending"] = material.getBendingCompliance();
 
     file << data.dump(4);
     file.close();

@@ -22,9 +22,20 @@ namespace Tissu {
 class Solver;
 class Cloth;
 
+/**
+ * @class OBJExporter
+ * @brief Exports cloth geometry to the Wavefront OBJ format.
+ */
 class OBJExporter {
 public:
-    static void exportOBJ(const std::string &filename, const Cloth& cloth, const Solver &solver);
+    /**
+     * @brief Writes the current particle positions of a cloth to an OBJ file.
+     *
+     * @param filename  Destination path.
+     * @param cloth     Source cloth providing particle indices and triangles.
+     * @param solver    Solver owning the particle buffer.
+     */
+    static void exportOBJ(const std::string& filename, const Cloth& cloth, const Solver& solver);
 };
 
 }

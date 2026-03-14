@@ -19,21 +19,29 @@
 
 namespace Tissu {
 
+/**
+ * @brief Represents a triangle with vertices a,b,c.
+ * 
+ */
 struct Triangle {
     int a, b, c;
     Triangle(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
 };
 
-
+/**
+ * @struct ClothMaterial
+ * @brief Defines the physical properties of a simulated cloth.
+ * 
+ */
 struct ClothMaterial {
-    double density;
-    double structuralCompliance;
-    double shearCompliance;
-    double bendingCompliance;
-
+public:
     ClothMaterial(double _density, double _structuralCompliance, double _shearCompliance, double _bendingCompliance)
     : density(_density), structuralCompliance(_structuralCompliance), shearCompliance(_shearCompliance), bendingCompliance(_bendingCompliance) {}
 
+    /**
+     * @brief Defines the properties of a cloth material.
+     * 
+     */
     ClothMaterial() : density(0.1), structuralCompliance(1e-6), shearCompliance(1e-6), bendingCompliance(0.01) {}
 
     inline double getDensity() const { return density; }
@@ -41,6 +49,17 @@ struct ClothMaterial {
     inline double getShearCompliance() const { return shearCompliance; }
     inline double getBendingCompliance() const { return bendingCompliance; }
 
+    inline void setDensity(double density) { this->density = density; }
+    inline void setStructuralCompliance(double structuralCompliance) { this->structuralCompliance = structuralCompliance; }
+    inline void setShearCompliance(double shearCompliance) { this->shearCompliance = shearCompliance; }
+    inline void setBendingCompliance(double bendingCompliance) { this->bendingCompliance = bendingCompliance; }
+    
+
+private:
+    double density;              ///< Mass per unit area in kg/m². Controls how heavy the cloth feels under gravity.
+    double structuralCompliance; ///< Resistance to stretching along edges. Lower = less stretch. Typical range: [0, 1e-6].
+    double shearCompliance;      ///< Resistance to in-plane shearing (diagonal deformation). Lower = stiffer weave. Typical range: [0, 1e-6].
+    double bendingCompliance;    ///< Resistance to folding between adjacent triangles. Higher = softer drape. Typical range: [1e-4, 0.1].
 };
 
 }
