@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "physics/GravityForce.hpp"
 #include "physics/Particle.hpp"
 
 using namespace Tissu;
@@ -81,4 +82,54 @@ TEST(Particle, StaticParticlePreserveZeroMassAfterAddMass) {
     p.addMass(10.0);
 
     EXPECT_EQ(0.0, p.getInverseMass());
+}
+
+TEST(Particle, GravityAffectsParticlePosition) {
+    Eigen::Vector3d initialPos(2.0, 20.0, 8.0);
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+
+    int iterations = 10;
+
+    Particle p(initialPos);
+    p.setInverseMass(1.0);
+    for (int idx = 0; idx < iterations; idx++) {
+        p.addForce(gravity);
+        p.integrate(0.016);
+    }
+
+    EXPECT_LT(p.getPosition().y(), initialPos.y());
+}
+
+TEST(Particle, SecondIntegrationHasBiggerVelocityThanTheFirstOne) {
+    Eigen::Vector3d initialPos(2.0, 20.0, 8.0);
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+
+
+    Particle p(initialPos);
+    // First Integration
+    p.addForce(gravity);
+    p.integrate(0.016);
+    Eigen::Vector3d fiVel = p.getVelocity(0.016);
+
+    // Second Integration
+    p.addForce(gravity);
+    p.integrate(0.016);
+    Eigen::Vector3d siVel = p.getVelocity(0.016);
+
+    EXPECT_LT(siVel.y(), fiVel.y());
+}
+
+TEST(Particle, ClearForcesWorks) {
+    Eigen::Vector3d initialPos(2.0, 20.0, 8.0);
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+
+    Particle p(initialPos);
+    p.addForce(gravity);
+    p.clearForces();
+
+    p.integrate(0.016);
+
+    EXPECT_EQ(p.getPosition().x(), p.getOldPosition().x());
+    EXPECT_EQ(p.getPosition().y(), p.getOldPosition().y());
+    EXPECT_EQ(p.getPosition().z(), p.getOldPosition().z());
 }
