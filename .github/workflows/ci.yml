@@ -49,6 +49,9 @@ jobs:
           sudo make install
           sudo ldconfig
 
+      - name: Install Python tools
+        run: pip install mypy
+
       - name: Configure
         run: |
           mkdir build && cd build
