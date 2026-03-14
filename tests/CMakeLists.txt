@@ -1,5 +1,6 @@
 add_executable(unit_tests
     test_particle.cpp
+    test_distance_constraint.cpp
 )
 
 target_link_libraries(unit_tests 

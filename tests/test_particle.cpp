@@ -1,5 +1,4 @@
 #include <gtest/gtest.h>
-#include "physics/GravityForce.hpp"
 #include "physics/Particle.hpp"
 
 using namespace Tissu;
