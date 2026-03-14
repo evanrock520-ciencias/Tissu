@@ -20,13 +20,27 @@ jobs:
           sudo apt install -y \
             cmake \
             build-essential \
-            libalembic-dev \
-            libilmbase-dev \
             libopenexr-dev \
+            libilmbase-dev \
             libboost-dev \
             libpython3-dev \
             pybind11-dev \
-            libomp-dev
+            libomp-dev \
+            git
+
+      - name: Install Alembic from source
+        run: |
+          git clone https://github.com/alembic/alembic.git
+          cd alembic
+          git checkout 1.8.6
+          mkdir build && cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_TESTS=OFF \
+            -DALEMBIC_ILMBASE_LINK_STATIC=OFF
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
 
       - name: Configure
         run: |
