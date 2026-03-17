@@ -1,4 +1,4 @@
-from python.cloth_sdk import Simulation, Fabric, Material
+from python.tissu import Simulation, Fabric, Material
 import os
 
 def falling():

@@ -45,10 +45,10 @@ void ClothMesh::initGrid(int rows, int cols, double spacing, Cloth& outCloth, So
     std::vector<int> gridIndices;
     gridIndices.reserve(rows * cols);   
     auto mat = outCloth.getMaterial();
-    double stComp = mat->structuralCompliance;
-    double shComp = mat->shearCompliance;
-    double beComp = mat->bendingCompliance;
-    double dens = mat->density;
+    double stComp = mat->getStructuralCompliance();
+    double shComp = mat->getShearCompliance();
+    double beComp = mat->getBendingCompliance();
+    double dens = mat->getDensity();
     outCloth.clear();
 
     outCloth.setTopology(ClothTopology::Grid);
@@ -113,10 +113,10 @@ void ClothMesh::buildFromMesh(const std::vector<Eigen::Vector3d>& positions, con
     outCloth.setTopology(ClothTopology::Mesh);
     outCloth.setGridDimensions(0, 0);
     auto mat = outCloth.getMaterial();
-    double stComp = mat->structuralCompliance;
-    double shComp = mat->shearCompliance;
-    double beComp = mat->bendingCompliance;
-    double dens = mat->density;
+    double stComp = mat->getStructuralCompliance();
+    double shComp = mat->getShearCompliance();
+    double beComp = mat->getBendingCompliance();
+    double dens = mat->getDensity();
 
 
     for (auto& position : positions) {
@@ -198,7 +198,7 @@ void ClothMesh::computePhysicalAttributes(Cloth& cloth, Solver& solver) const {
     const auto& particles = solver.getParticles();
     const auto& triangles = cloth.getTriangles();
     const auto& indices = cloth.getParticleIndices();
-    double density = cloth.getMaterial()->density;
+    double density = cloth.getMaterial()->getDensity();
 
     for(const auto& triangle : triangles) {
         const Particle& pA = particles[triangle.a];
@@ -385,10 +385,10 @@ bool ConfigLoader::load(const std::string& filepath, Solver& solver, World& worl
         auto mat = data["material"];
         auto comp = mat.value("compliance", nlohmann::json::object());
 
-        outMaterial.density = mat.value("density", 0.1);
-        outMaterial.structuralCompliance = comp.value("structural", 1e-6);
-        outMaterial.shearCompliance = comp.value("shear", 1e-6);
-        outMaterial.bendingCompliance = comp.value("bending", 1e-4);
+        outMaterial.setDensity(mat.value("density", 0.1));
+        outMaterial.setStructuralCompliance(comp.value("structural", 1e-6));
+        outMaterial.setShearCompliance(comp.value("shear", 1e-6));
+        outMaterial.setBendingCompliance(comp.value("bending", 1e-4));
     }
 
     if (data.contains("aerodynamics")) {
@@ -424,11 +424,10 @@ bool ConfigLoader::save(const std::string& filepath, const Solver& solver, const
     data["aerodynamics"]["air_density"] = world.getAirDensity();
     data["collisions"]["thickness"] = world.getThickness();
 
-    // Datos del Material
-    data["material"]["density"] = material.density;
-    data["material"]["compliance"]["structural"] = material.structuralCompliance;
-    data["material"]["compliance"]["shear"] = material.shearCompliance;
-    data["material"]["compliance"]["bending"] = material.bendingCompliance;
+    data["material"]["density"] = material.getDensity();
+    data["material"]["compliance"]["structural"] = material.getStructuralCompliance();
+    data["material"]["compliance"]["shear"] = material.getShearCompliance();
+    data["material"]["compliance"]["bending"] = material.getBendingCompliance();
 
     file << data.dump(4);
     file.close();
@@ -973,7 +972,6 @@ void PlaneCollider::resolve(std::vector<Particle>& particles, double dt, double 
         double distance = vec.dot(m_normal);
 
         if (distance < thickness) {
-            
             double penetration = thickness - distance;
             Eigen::Vector3d newPosition = particle.getPosition() + m_normal * penetration;
             particle.setPosition(newPosition);
@@ -1355,14 +1353,53 @@ void Logger::log(const std::string& level, const std::string& color, const std::
 
 namespace Tissu {
 
+/**
+ * @enum ClothTopology
+ * @brief Describes the construction method of a cloth object.
+ */
 enum class ClothTopology {
-    Grid,
-    Mesh
+    Grid, ///< Procedurally generated uniform grid via @ref ClothMesh::initGrid.
+    Mesh  ///< Topology loaded from a Wavefront OBJ file via @ref ClothMesh::buildFromMesh.
 };
 
+/**
+ * @class Cloth
+ * @brief Represents a simulated garment within the physics world.
+ *
+ * A Cloth holds the topology, material properties, and particle references
+ * that define a single piece of fabric. It does not own the particles —
+ * those live in the @ref Solver. The Cloth acts as a view over the solver's
+ * particle buffer, identifying which particles and constraints belong to it.
+ *
+ * Cloth objects are registered into a @ref World and updated each frame
+ * by the @ref Solver.
+ */
 class Cloth {
 public:
     Cloth(const std::string& name, std::shared_ptr<ClothMaterial> material);
+
+    /**
+     * @brief Returns the particle's ID using the rows and cols as parameters to search in the indice's buffer.
+     * 
+     * @param r The row of the particle.
+     * @param c The column of the particle.
+     * @return int The particle's ID.
+     */
+    inline int getParticleID(int r, int c) const { 
+        int localIndex = r * m_gridCols + c;
+        return m_particleIndices[localIndex];
+    }
+
+    /**
+     * @brief Clears the indices, triangles, and aerofaces buffers.
+     * 
+     */
+    void clear();
+
+    inline void addAeroFace(int a, int b, int c) { m_faces.push_back({a, b, c}); }
+    void addParticleId(int id);
+    void addTriangle(const Triangle& tri);
+    void addVisualEdge(unsigned int idA, unsigned int idB);
 
     void setName(const std::string& name);
     void setMaterial(std::shared_ptr<ClothMaterial> material);
@@ -1375,22 +1412,11 @@ public:
     inline const std::vector<int>& getParticleIndices() const { return m_particleIndices; }
     inline const std::vector<Triangle>& getTriangles() const { return m_triangles; }
     inline const std::vector<unsigned int>& getVisualEdges() const { return m_visualEdges; }
+    inline const std::vector<AeroFace>& getAeroFaces() const { return m_faces; }
     inline const int getRows() const { return m_gridRows; }
     inline const int getCols() const { return m_gridCols; }
-    inline void addAeroFace(int a, int b, int c) { m_faces.push_back({a, b, c}); }
-    inline const std::vector<AeroFace>& getAeroFaces() const { return m_faces; }
-    inline int getParticleID(int r, int c) const { 
-        int localIndex = r * m_gridCols + c;
-        return m_particleIndices[localIndex];
-    }
 
     bool isGrid() const { return m_topology == ClothTopology::Grid; }
-
-    void addParticleId(int id);
-    void addTriangle(const Triangle& tri);
-    void addVisualEdge(unsigned int idA, unsigned int idB);
-
-    void clear();
 
 private:
     std::string m_name;
@@ -1695,9 +1721,20 @@ namespace Tissu {
 class Solver;
 class Cloth;
 
+/**
+ * @class OBJExporter
+ * @brief Exports cloth geometry to the Wavefront OBJ format.
+ */
 class OBJExporter {
 public:
-    static void exportOBJ(const std::string &filename, const Cloth& cloth, const Solver &solver);
+    /**
+     * @brief Writes the current particle positions of a cloth to an OBJ file.
+     *
+     * @param filename  Destination path.
+     * @param cloth     Source cloth providing particle indices and triangles.
+     * @param solver    Solver owning the particle buffer.
+     */
+    static void exportOBJ(const std::string& filename, const Cloth& cloth, const Solver& solver);
 };
 
 }/*
@@ -1723,8 +1760,27 @@ public:
 
 namespace Tissu {
 
+/**
+ * @class OBJLoader
+ * @brief Parses Wavefront OBJ files into solver-ready geometry buffers.
+ *
+ * Wraps tinyobjloader to extract vertex positions and triangle indices
+ * from an OBJ file. The output is intended to be passed directly to
+ * @ref ClothMesh::buildFromMesh.
+ */
 class OBJLoader {
 public:
+    /**
+     * @brief Loads vertex positions and triangle indices from a Wavefront OBJ file.
+     * 
+     * @param path Path to the .obj file.
+     * @param outPos Output vector populated with one entry per unique vertex.
+     *        Cleared before writing.
+     * @param outIndices Output vector of flat triangle indices into @p outPos.
+     *        Cleared before writing.
+     * @return true If correctly loaded.
+     * @return false In other way.
+     */
     static bool load(const std::string& path, std::vector<Eigen::Vector3d>& outPos, std::vector<int>& outIndices);
 };
 
@@ -1750,21 +1806,29 @@ public:
 
 namespace Tissu {
 
+/**
+ * @brief Represents a triangle with vertices a,b,c.
+ * 
+ */
 struct Triangle {
     int a, b, c;
     Triangle(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
 };
 
-
+/**
+ * @struct ClothMaterial
+ * @brief Defines the physical properties of a simulated cloth.
+ * 
+ */
 struct ClothMaterial {
-    double density;
-    double structuralCompliance;
-    double shearCompliance;
-    double bendingCompliance;
-
+public:
     ClothMaterial(double _density, double _structuralCompliance, double _shearCompliance, double _bendingCompliance)
     : density(_density), structuralCompliance(_structuralCompliance), shearCompliance(_shearCompliance), bendingCompliance(_bendingCompliance) {}
 
+    /**
+     * @brief Defines the properties of a cloth material.
+     * 
+     */
     ClothMaterial() : density(0.1), structuralCompliance(1e-6), shearCompliance(1e-6), bendingCompliance(0.01) {}
 
     inline double getDensity() const { return density; }
@@ -1772,6 +1836,17 @@ struct ClothMaterial {
     inline double getShearCompliance() const { return shearCompliance; }
     inline double getBendingCompliance() const { return bendingCompliance; }
 
+    inline void setDensity(double density) { this->density = density; }
+    inline void setStructuralCompliance(double structuralCompliance) { this->structuralCompliance = structuralCompliance; }
+    inline void setShearCompliance(double shearCompliance) { this->shearCompliance = shearCompliance; }
+    inline void setBendingCompliance(double bendingCompliance) { this->bendingCompliance = bendingCompliance; }
+    
+
+private:
+    double density;              ///< Mass per unit area in kg/m². Controls how heavy the cloth feels under gravity.
+    double structuralCompliance; ///< Resistance to stretching along edges. Lower = less stretch. Typical range: [0, 1e-6].
+    double shearCompliance;      ///< Resistance to in-plane shearing (diagonal deformation). Lower = stiffer weave. Typical range: [0, 1e-6].
+    double bendingCompliance;    ///< Resistance to folding between adjacent triangles. Higher = softer drape. Typical range: [1e-4, 0.1].
 };
 
 }/*
@@ -1800,10 +1875,22 @@ struct ClothMaterial {
 
 namespace Tissu {
 
+/**
+ * @struct AeroFace
+ * @brief Triangle face used for aerodynamic force calculations.
+ * 
+ */
 struct AeroFace {
     int a, b, c;
 };
 
+/**
+ * @class AerodynamicForce
+ * @brief Computes and applies aerodynamic pressure forces to cloth faces.
+ *
+ * Models wind interaction using per-face pressure based on the relative
+ * velocity between the wind and the face's surface normal.
+ */
 class AerodynamicForce final : public Force {
 public:
     AerodynamicForce(
@@ -1812,19 +1899,35 @@ public:
         double airDensity
     );
 
+    /**
+     * @brief Computes aerodynamic pressure and accumulates in into each particle.
+     * 
+     * The force applied to each face is:
+     * @f[
+     * \mathbf{F} = -\frac{1}{2} \rho \|\mathbf{v}_{rel}\| \cdot (\mathbf{v}_{rel} \cdot \hat{n}) \cdot A \cdot \hat{n}
+     * @f]
+     * where @f$ \rho @f$ is the air density, @f$ \mathbf{v}_{rel} @f$ is the relative velocity
+     * between the face and the wind, @f$ \hat{n} @f$ is the face normal, and @f$ A @f$ is the triangle area.
+     * The resulting force is distributed equally across the three vertices of each face.
+     *
+     * 
+     * @param particles Reference to the solver's global particle buffer.
+     * @param dt Current substep time delta.
+     */
     void apply(std::vector<Particle>& particles, double dt) override;
 
-    inline void setWind(const Eigen::Vector3d& wind) { m_wind = wind; }
     inline const Eigen::Vector3d& getWind() const { return m_wind; }
-    inline void setAirDensity(double density) { m_airDensity = density; }
     inline double getAirDensity() const { return m_airDensity; }
+
+    inline void setWind(const Eigen::Vector3d& wind) { m_wind = wind; }
+    inline void setAirDensity(double density) { m_airDensity = density; }
     inline void setFaces(AeroFace face) { m_faces.push_back(face); }
 
 private:
-    std::vector<AeroFace> m_faces;
-    Eigen::Vector3d m_wind;
-    double m_airDensity;
-    double m_time = 0.0;
+    std::vector<AeroFace> m_faces; ///< Aerodynamic triangle faces.
+    Eigen::Vector3d m_wind;        ///< Base wind velocity vector in world space (m/s).
+    double m_airDensity;           ///< Air density used in pressure calculation (kg/m³).
+    double m_time = 0.0;           ///< Accumulated simulation time, used for gust oscillation.
 };
 
 }
@@ -4216,12 +4319,20 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def_readwrite("c", &Triangle::c);
 
     py::class_<Tissu::ClothMaterial, std::shared_ptr<Tissu::ClothMaterial>>(m, "ClothMaterial")
-        .def(py::init<double, double, double, double>(),
-            py::arg("density"), py::arg("structural"), py::arg("shear"), py::arg("bending"))
-        .def_readwrite("density", &ClothMaterial::density)
-        .def_readwrite("structural_compliance", &ClothMaterial::structuralCompliance)
-        .def_readwrite("shear_compliance", &ClothMaterial::shearCompliance)
-        .def_readwrite("bending_compliance", &ClothMaterial::bendingCompliance);
+    .def(py::init<double, double, double, double>(),
+        py::arg("density"), py::arg("structural"), py::arg("shear"), py::arg("bending"))
+    .def_property("density",
+        &ClothMaterial::getDensity,
+        &ClothMaterial::setDensity)
+    .def_property("structural_compliance",
+        &ClothMaterial::getStructuralCompliance,
+        &ClothMaterial::setStructuralCompliance)
+    .def_property("shear_compliance",
+        &ClothMaterial::getShearCompliance,
+        &ClothMaterial::setShearCompliance)
+    .def_property("bending_compliance",
+        &ClothMaterial::getBendingCompliance,
+        &ClothMaterial::setBendingCompliance);
 
     py::class_<Tissu::AeroFace>(m, "AeroFace")
         .def(py::init<int, int, int>(), py::arg("a"), py::arg("b"), py::arg("c"))
@@ -4383,7 +4494,6 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         py::arg("solver"), 
         "Exports a specific cloth instance to an OBJ file"); 
 }cmake_minimum_required(VERSION 3.16)
-
 if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
@@ -4391,59 +4501,16 @@ endif()
 project(Tissu VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include(FetchContent)
 
-FetchContent_Declare(
-  googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        v1.15.2  
-)
-
-FetchContent_Declare(
-  eigen
-  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-  GIT_TAG        3.4.0 
-)
-
-FetchContent_Declare(
-  tinyobjloader
-  GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
-  GIT_TAG        release
-)
-
-FetchContent_Declare(
-  json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG        v3.11.3
-)
-
-FetchContent_Declare(
-  pybind11
-  GIT_REPOSITORY https://github.com/pybind/pybind11.git
-  GIT_TAG        v2.13.6
-)
-
-FetchContent_Declare(
-  glfw
-  GIT_REPOSITORY https://github.com/glfw/glfw.git
-  GIT_TAG        3.3.8
-)
-
-FetchContent_Declare(
-  glad
-  GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-  GIT_TAG        v0.1.36
-)
-
-FetchContent_Declare(
-  imgui
-  GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG        v1.91.5-docking 
-)
+FetchContent_Declare(googletest GIT_REPOSITORY https://github.com/google/googletest.git GIT_TAG v1.15.2)
+FetchContent_Declare(eigen GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git GIT_TAG 3.4.0)
+FetchContent_Declare(tinyobjloader GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git GIT_TAG release)
+FetchContent_Declare(json GIT_REPOSITORY https://github.com/nlohmann/json.git GIT_TAG v3.11.3)
+FetchContent_Declare(pybind11 GIT_REPOSITORY https://github.com/pybind/pybind11.git GIT_TAG v2.13.6)
 
 set(TINYOBJLOADER_INSTALL OFF CACHE BOOL "" FORCE)
 set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "" FORCE)
@@ -4452,24 +4519,41 @@ set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(PYBIND11_INSTALL OFF CACHE BOOL "" FORCE)
 set(PYBIND11_TEST OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(googletest eigen tinyobjloader json pybind11 glfw glad imgui)
+FetchContent_MakeAvailable(googletest eigen tinyobjloader json pybind11)
+
 find_package(OpenMP REQUIRED)
 
+option(TISSU_BUILD_VIEWER "Build the OpenGL viewer" ON)
+
+if(TISSU_BUILD_VIEWER)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(glfw GIT_REPOSITORY https://github.com/glfw/glfw.git GIT_TAG 3.3.8)
+    FetchContent_Declare(glad GIT_REPOSITORY https://github.com/Dav1dde/glad.git GIT_TAG v0.1.36)
+    FetchContent_Declare(imgui GIT_REPOSITORY https://github.com/ocornut/imgui.git GIT_TAG v1.91.5-docking)
+
+    FetchContent_MakeAvailable(glfw glad imgui)
+endif()
+
 add_subdirectory(core)
-add_subdirectory(viewer)
 
-pybind11_add_module(_cloth_sdk_core python/src/bindings.cpp)
-target_link_libraries(_cloth_sdk_core PRIVATE ClothCore ViewerCore)
+if(TISSU_BUILD_VIEWER)
+    add_subdirectory(viewer)
+endif()
 
-set(STUB_OUTPUT
-    ${CMAKE_CURRENT_BINARY_DIR}/_cloth_sdk_core.pyi
-)
+if(TISSU_BUILD_VIEWER)
+    pybind11_add_module(_cloth_sdk_core python/src/bindings.cpp)
+    target_link_libraries(_cloth_sdk_core PRIVATE ClothCore ViewerCore)
+else()
+    pybind11_add_module(_cloth_sdk_core python/src/bindings_headless.cpp)
+    target_link_libraries(_cloth_sdk_core PRIVATE ClothCore)
+endif()
 
+set(STUB_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_cloth_sdk_core.pyi)
 find_program(STUBGEN_EXECUTABLE stubgen REQUIRED)
 
 add_custom_command(
@@ -4485,11 +4569,10 @@ add_custom_command(
     COMMENT "Generating Python stubs for _cloth_sdk_core"
 )
 
-add_custom_target(_cloth_sdk_core_stubs ALL
-    DEPENDS ${STUB_OUTPUT}
-)
+add_custom_target(_cloth_sdk_core_stubs ALL DEPENDS ${STUB_OUTPUT})
 
-enable_testing()set(CORE_SOURCES
+enable_testing()
+add_subdirectory(tests)set(CORE_SOURCES
     src/physics/Particle.cpp
     src/physics/Solver.cpp
     src/physics/Constraint.cpp
@@ -4532,7 +4615,7 @@ target_link_libraries(ClothCore PUBLIC
 target_include_directories(ClothCore PUBLIC 
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
-)from python.cloth_sdk import Simulation, Fabric, Material
+)from python.tissu import Simulation, Fabric, Material
 import os
 
 def falling():
@@ -4727,4 +4810,581 @@ Since Tissu exports standard Alembic files, visualizing the result is straightfo
 
 ## 📄 License
 
-This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENSE) file for details.add_executable(unit_tests
+    test_particle.cpp
+    test_distance_constraint.cpp
+    test_pin_constraint.cpp
+    test_spatial_hash.cpp
+    test_plane_collider.cpp
+)
+
+target_link_libraries(unit_tests 
+    PRIVATE 
+        ClothCore 
+        GTest::gtest_main 
+        Eigen3::Eigen
+)
+
+include(GoogleTest)
+gtest_discover_tests(unit_tests)#include <gtest/gtest.h>
+#include "physics/Particle.hpp"
+#include "physics/DistanceConstraint.hpp"
+
+using namespace Tissu;
+
+TEST(DistanceConstraint, ConvergeToRestLenght) {
+    std::vector<Particle> particles;
+    particles.emplace_back(Eigen::Vector3d(0.0, 0.0, 0.0));
+    particles.emplace_back(Eigen::Vector3d(2.0, 0.0, 0.0));
+
+    int iterations = 100;
+
+    DistanceConstraint constraint(0, 1, 1.0, 0.0);
+    for (int idx = 0; idx < iterations; idx++) 
+        constraint.solve(particles, 0.016);
+
+    double distance = (particles[0].getPosition() - particles[1].getPosition()).norm();
+
+    EXPECT_NEAR(1.0, distance, 1e-9);
+}
+
+TEST(DistanceConstraint, StaticParticlesDoesNotChangeThemPositions) {
+    Eigen::Vector3d initialP1(4.0,4.0,4.0);
+    Eigen::Vector3d initialP2(0.0, 0.0, 0.0);
+
+    Particle p1(initialP1);
+    Particle p2(initialP2);
+    p1.setInverseMass(0.0);
+    p2.setInverseMass(0.0);
+
+    std::vector<Particle> particles;
+
+    particles.emplace_back(p1);
+    particles.emplace_back(p2);
+
+    int iterations = 100;
+
+    DistanceConstraint constraint(0, 1, 1.0, 0.0);
+    for (int idx = 0; idx < iterations; idx++) 
+        constraint.solve(particles, 0.016);
+
+    EXPECT_EQ(particles[0].getPosition().x(), initialP1.x());
+    EXPECT_EQ(particles[0].getPosition().y(), initialP1.y());
+    EXPECT_EQ(particles[0].getPosition().z(), initialP1.z());
+
+    EXPECT_EQ(particles[1].getPosition().x(), initialP2.x());
+    EXPECT_EQ(particles[1].getPosition().y(), initialP2.y());
+    EXPECT_EQ(particles[1].getPosition().z(), initialP2.z());
+}
+
+TEST(DistanceConstraint, StaticParticleDoesNotChangeItsPositionButNonStaticDoIt) {
+    Eigen::Vector3d initialP1(4.0,4.0,4.0);
+    Eigen::Vector3d initialP2(0.0, 0.0, 0.0);
+
+    Particle p1(initialP1);
+    Particle p2(initialP2);
+    p1.setInverseMass(0.0);
+    p2.setInverseMass(1.0);
+
+    std::vector<Particle> particles;
+
+    particles.emplace_back(p1);
+    particles.emplace_back(p2);
+
+    int iterations = 100;
+
+    DistanceConstraint constraint(0, 1, 1.0, 0.0);
+    for (int idx = 0; idx < iterations; idx++) 
+        constraint.solve(particles, 0.016);
+
+    double distance = (particles[0].getPosition() - particles[1].getPosition()).norm();
+    EXPECT_NEAR(distance, 1.0, 1e-4);
+
+    EXPECT_EQ(particles[0].getPosition().x(), initialP1.x());
+    EXPECT_EQ(particles[0].getPosition().y(), initialP1.y());
+    EXPECT_EQ(particles[0].getPosition().z(), initialP1.z());
+}
+
+TEST(DistanceConstraint, StaticParticleAndNonStaticParticleWithZeroComplianceConvergeToRestLenghtInOneIteration) {
+    Eigen::Vector3d initialP1(4.0,4.0,4.0);
+    Eigen::Vector3d initialP2(0.0, 0.0, 0.0);
+
+    Particle p1(initialP1);
+    Particle p2(initialP2);
+    p1.setInverseMass(0.0);
+    p2.setInverseMass(1.0);
+
+    std::vector<Particle> particles;
+
+    particles.emplace_back(p1);
+    particles.emplace_back(p2);
+
+    DistanceConstraint constraint(0, 1, 1.0, 0.0);
+    constraint.solve(particles, 0.016);
+
+    double distance = (particles[0].getPosition() - particles[1].getPosition()).norm();
+
+    EXPECT_NEAR(1.0, distance, 1e-9);
+}
+
+TEST(DistanceConstraint, LowerComplianceConvergeFasterToRestLenght) {
+    std::vector<Particle> particles;
+
+    particles.emplace_back(Eigen::Vector3d(4.0, 4.0, 4.0));
+    particles.emplace_back(Eigen::Vector3d(0.0, 0.0, 0.0));
+    particles.emplace_back(Eigen::Vector3d(4.0, 4.0, 4.0));
+    particles.emplace_back(Eigen::Vector3d(0.0, 0.0, 0.0));
+
+    int iterations = 5;
+
+    DistanceConstraint constraintBC(0, 1, 1.0, 0.8);
+    for (int idx = 0; idx < iterations; idx++)
+        constraintBC.solve(particles, 0.016);
+
+    DistanceConstraint constraintLC(2, 3, 1.0, 0.2);
+    for (int idx = 0; idx < iterations; idx++)
+        constraintLC.solve(particles, 0.016);
+
+    double distanceBC = (particles[0].getPosition() - particles[1].getPosition()).norm();
+    double distanceLC = (particles[2].getPosition() - particles[3].getPosition()).norm();
+
+    double errBC = 1.0 - distanceBC;
+    double errLC = 1.0 - distanceLC;
+
+    EXPECT_LT(errBC, errLC);
+}#include <gtest/gtest.h>
+#include "physics/Particle.hpp"
+
+using namespace Tissu;
+
+TEST(Particle, InitialPosition) {
+    Eigen::Vector3d expectedPos(1.0, 2.0, 3.0);
+
+    Particle p(expectedPos);
+
+    EXPECT_NEAR(p.getPosition().x(), expectedPos.x(), 1e-9);
+    EXPECT_NEAR(p.getPosition().y(), expectedPos.y(), 1e-9);
+    EXPECT_NEAR(p.getPosition().z(), expectedPos.z(), 1e-9);
+}
+
+TEST(Particle, SetPositionUpdateCurrentPosition) {
+    Eigen::Vector3d initalPos(1.0, 2.0, 3.0);
+    Eigen::Vector3d expectedPos(4.0, 5.0, 6.0);
+
+    Particle p(initalPos);
+    p.setPosition(expectedPos);
+
+    EXPECT_NEAR(p.getPosition().x(), expectedPos.x(), 1e-9);
+    EXPECT_NEAR(p.getPosition().y(), expectedPos.y(), 1e-9);
+    EXPECT_NEAR(p.getPosition().z(), expectedPos.z(), 1e-9);
+}
+
+TEST(Particle, SetPositionPreserveOldPosition) {
+    Eigen::Vector3d initalPos(1.0, 2.0, 3.0);
+    Eigen::Vector3d expectedPos(4.0, 5.0, 6.0);
+
+    Particle p(initalPos);
+    p.setPosition(expectedPos);
+
+    EXPECT_NEAR(p.getOldPosition().x(), initalPos.x(), 1e-9);
+    EXPECT_NEAR(p.getOldPosition().y(), initalPos.y(), 1e-9);
+    EXPECT_NEAR(p.getOldPosition().z(), initalPos.z(), 1e-9);
+}
+
+TEST(Particle, StaticParticleDoesNotChangePositionAfterIntegrate) {
+    Eigen::Vector3d expectedPos(1.0, 2.0, 3.0);
+
+    Particle p(expectedPos);
+    p.setInverseMass(0.0);
+    p.integrate(0.016);
+
+    EXPECT_NEAR(p.getPosition().x(), expectedPos.x(), 1e-9);
+    EXPECT_NEAR(p.getPosition().y(), expectedPos.y(), 1e-9);
+    EXPECT_NEAR(p.getPosition().z(), expectedPos.z(), 1e-9);    
+}
+
+TEST(Particle, StaticParticleDoesNotChangePositionAfterApplyForces) {
+    Eigen::Vector3d expectedPos(1.0, 2.0, 3.0);
+    Eigen::Vector3d force(10.0, 2.0, 5.0);
+
+    Particle p(expectedPos);
+    p.setInverseMass(0.0);
+    p.addForce(force);
+    p.integrate(0.016);
+
+    EXPECT_NEAR(p.getPosition().x(), expectedPos.x(), 1e-9);
+    EXPECT_NEAR(p.getPosition().y(), expectedPos.y(), 1e-9);
+    EXPECT_NEAR(p.getPosition().z(), expectedPos.z(), 1e-9); 
+}
+
+TEST(Particle, AddMassUpdatesInverseMass) {
+    Eigen::Vector3d expectedPos(1.0, 2.0, 3.0);
+
+    Particle p(expectedPos);
+    p.setInverseMass(1.0);
+    p.addMass(1.0);
+
+    EXPECT_EQ(0.5, p.getInverseMass());
+}
+
+TEST(Particle, StaticParticlePreserveZeroMassAfterAddMass) {
+    Eigen::Vector3d expectedPos(1.0, 2.0, 3.0);
+
+    Particle p(expectedPos);
+    p.setInverseMass(0.0);
+    p.addMass(10.0);
+
+    EXPECT_EQ(0.0, p.getInverseMass());
+}
+
+TEST(Particle, GravityAffectsParticlePosition) {
+    Eigen::Vector3d initialPos(2.0, 20.0, 8.0);
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+
+    int iterations = 10;
+
+    Particle p(initialPos);
+    p.setInverseMass(1.0);
+    for (int idx = 0; idx < iterations; idx++) {
+        p.addForce(gravity);
+        p.integrate(0.016);
+    }
+
+    EXPECT_LT(p.getPosition().y(), initialPos.y());
+}
+
+TEST(Particle, SecondIntegrationHasBiggerVelocityThanTheFirstOne) {
+    Eigen::Vector3d initialPos(2.0, 20.0, 8.0);
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+
+
+    Particle p(initialPos);
+    // First Integration
+    p.addForce(gravity);
+    p.integrate(0.016);
+    Eigen::Vector3d fiVel = p.getVelocity(0.016);
+
+    // Second Integration
+    p.addForce(gravity);
+    p.integrate(0.016);
+    Eigen::Vector3d siVel = p.getVelocity(0.016);
+
+    EXPECT_LT(siVel.y(), fiVel.y());
+}
+
+TEST(Particle, ClearForcesWorks) {
+    Eigen::Vector3d initialPos(2.0, 20.0, 8.0);
+    Eigen::Vector3d gravity(0.0, -9.81, 0.0);
+
+    Particle p(initialPos);
+    p.addForce(gravity);
+    p.clearForces();
+
+    p.integrate(0.016);
+
+    EXPECT_EQ(p.getPosition().x(), p.getOldPosition().x());
+    EXPECT_EQ(p.getPosition().y(), p.getOldPosition().y());
+    EXPECT_EQ(p.getPosition().z(), p.getOldPosition().z());
+}#include <gtest/gtest.h>
+#include <vector>
+#include "physics/Particle.hpp"
+#include "physics/PinConstraint.hpp"
+
+using namespace Tissu;
+
+TEST(PinConstraint, ZeroComplianceMovesParticleToPinPositionInOneIteration) {
+    Eigen::Vector3d pinPos(10.0, 1.0, 8.0);
+    Eigen::Vector3d initialPos(0.0, 2.0, 3.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    PinConstraint constraint(0, pinPos, 0.0);
+    constraint.solve(particles, 0.016);
+
+    ASSERT_EQ(particles[0].getPosition().x(), pinPos.x());
+    ASSERT_EQ(particles[0].getPosition().y(), pinPos.y());
+    ASSERT_EQ(particles[0].getPosition().z(), pinPos.z());
+}
+
+TEST(PinConstraint, StaticParticleStaysInTheSamePosition) {
+    Eigen::Vector3d pinPos(10.0, 1.0, 8.0);
+    Eigen::Vector3d initialPos(0.0, 2.0, 3.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+    particles[0].setInverseMass(0.0);
+
+    PinConstraint constraint (0, pinPos, 0.0);
+    constraint.solve(particles, 0.016);
+
+    ASSERT_EQ(particles[0].getPosition().x(), initialPos.x());
+    ASSERT_EQ(particles[0].getPosition().y(), initialPos.y());
+    ASSERT_EQ(particles[0].getPosition().z(), initialPos.z());
+}
+
+TEST(PinConstraint, ConvergeToPinPosition) {
+    Eigen::Vector3d pinPos(10.0, 1.0, 8.0);
+    Eigen::Vector3d initialPos(0.0, 2.0, 3.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    PinConstraint constraint(0, pinPos, 0.0);
+    int iterations = 100;
+
+    for (int idx = 0; idx < iterations; idx++)
+        constraint.solve(particles, 0.016);
+
+    ASSERT_NEAR(particles[0].getPosition().x(), pinPos.x(), 1e-4);
+    ASSERT_NEAR(particles[0].getPosition().y(), pinPos.y(), 1e-4);
+    ASSERT_NEAR(particles[0].getPosition().z(), pinPos.z(), 1e-4);
+}
+
+TEST(PinConstraint, LowerComplianceConvergeFasterToPinPosition) {
+    Eigen::Vector3d pinPos(10.0, 12.0, 8.0);
+    std::vector<Particle> particles;
+
+    particles.emplace_back(Eigen::Vector3d(4.0, 4.0, 4.0));
+    particles.emplace_back(Eigen::Vector3d(4.0, 4.0, 4.0));
+
+    int iterations = 5;
+
+    PinConstraint constraintA(0, pinPos, 0.2);
+    PinConstraint constraintB(1, pinPos, 0.8);
+
+    for (int idx = 0; idx < iterations; idx++)
+        constraintA.solve(particles, 0.016);
+
+    for (int idx = 0; idx < iterations; idx++)
+        constraintB.solve(particles, 0.016);
+
+    double distanceA = (pinPos - particles[0].getPosition()).norm();
+    double distanceB = (pinPos - particles[1].getPosition()).norm();
+
+    ASSERT_LT(distanceA, distanceB);
+}#include "gtest/gtest.h"
+#include "physics/Particle.hpp"
+#include "physics/PlaneCollider.hpp"
+
+
+using namespace Tissu;
+
+TEST(PlaneCollider, ParticleUnderThePlaneMovesUpside) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    Eigen::Vector3d normal(0.0, 1.0, 0.0);
+    PlaneCollider collider(origin, normal, 0.0);
+
+    Eigen::Vector3d initialPos(0.0, -1.0, 0.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    collider.resolve(particles, 0.016, 0.0);
+
+    EXPECT_GE(particles[0].getPosition().y(), origin.y());
+}
+
+TEST(PlaneCollider, ParticleUpsideDoesNotChangeItsPosition) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    Eigen::Vector3d normal(0.0, 1.0, 0.0);
+    PlaneCollider collider(origin, normal, 0.0);
+
+    Eigen::Vector3d initialPos(2.0, 8.0, 5.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    collider.resolve(particles, 0.016, 0.0);
+
+    EXPECT_EQ(particles[0].getPosition().x(), initialPos.x());
+    EXPECT_EQ(particles[0].getPosition().y(), initialPos.y());
+    EXPECT_EQ(particles[0].getPosition().z(), initialPos.z());
+}
+
+TEST(PlaneCollider, ParticleInThicknessRadioChangesItsPosition) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    Eigen::Vector3d normal(0.0, 1.0, 0.0);
+    PlaneCollider collider(origin, normal, 0.0);
+
+    Eigen::Vector3d initialPos(2.0, 2.0, 2.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    collider.resolve(particles, 0.016, 3.0);
+
+    Eigen::Vector3d predictedPosition;
+    predictedPosition = initialPos + normal * (3.0-2.0);
+
+    EXPECT_NEAR(particles[0].getPosition().x(), predictedPosition.x(), 1e-4);
+    EXPECT_NEAR(particles[0].getPosition().y(), predictedPosition.y(), 1e-4);
+    EXPECT_NEAR(particles[0].getPosition().z(), predictedPosition.z(), 1e-4);
+}
+
+TEST(PlaneCollider, FullFrictionCancelsTangentialVelocity) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    Eigen::Vector3d normal(0.0, 1.0, 0.0);
+    PlaneCollider collider(origin, normal, 1.0); 
+
+    std::vector<Particle> particles;
+    particles.emplace_back(Eigen::Vector3d(0.0, -0.5, 0.0));
+    particles[0].setOldPosition(Eigen::Vector3d(-1.0, -0.5, 0.0));
+
+    collider.resolve(particles, 0.016, 0.0);
+
+    double velocityX = particles[0].getPosition().x() - particles[0].getOldPosition().x();
+    double velocityZ = particles[0].getPosition().z() - particles[0].getOldPosition().z();
+
+    EXPECT_NEAR(velocityX, 0.0, 1e-9);
+    EXPECT_NEAR(velocityZ, 0.0, 1e-9);
+}
+
+TEST(PlaneCollider, NoFrictionDoesNotChangeTangentialVelocity) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    Eigen::Vector3d normal(0.0, 1.0, 0.0);
+    PlaneCollider collider(origin, normal, 0.0); 
+
+    std::vector<Particle> particles;
+    particles.emplace_back(Eigen::Vector3d(0.0, -0.5, 0.0));
+    particles[0].setOldPosition(Eigen::Vector3d(-1.0, -0.5, 0.0));
+
+    collider.resolve(particles, 0.016, 0.0);
+
+    double velocityX = particles[0].getPosition().x() - particles[0].getOldPosition().x();
+
+    EXPECT_NEAR(velocityX, 1, 1e-9);
+}#include "gtest/gtest.h"
+#include <vector>
+#include "physics/Particle.hpp"
+#include "physics/SpatialHash.hpp"
+
+using namespace Tissu;
+
+TEST(SpatialHash, QueryOnParticlePositionFindsTheParticleOnThatPosition) {
+    std::vector<Particle> particles;
+    Eigen::Vector3d pos(1.0, 0.0, 0.0);
+
+    particles.emplace_back(pos);
+
+    SpatialHash hash(1000, 1.0);
+    hash.build(particles);
+
+    std::vector<int> neighbors;
+    hash.query(particles, pos, 1.0, neighbors);
+
+    EXPECT_EQ(1, neighbors.size());
+}
+
+TEST(SpatialHash, QueryDoesNotFindOutOfRadioParticles) {
+    std::vector<Particle> particles;
+    Eigen::Vector3d queryPos(0.0, 1.0, 0.0);
+    Eigen::Vector3d posA(10.0, 0.0, 0.0);
+    Eigen::Vector3d posB(0.0, 100.0, 0.0);
+    Eigen::Vector3d posC(10.0, 90.0, 1.0);
+
+    particles.emplace_back(posA);
+    particles.emplace_back(posB);
+    particles.emplace_back(posC);
+
+    SpatialHash hash(1000, 1.0);
+    hash.build(particles);
+
+    std::vector<int> neighbors;
+    hash.query(particles, queryPos, 2.0, neighbors);    
+
+    EXPECT_EQ(0, neighbors.size());
+}
+
+TEST(SpatialHash, QueryFindsAllParticlesInRadio) {
+    std::vector<Particle> particles;
+    Eigen::Vector3d queryPos(0.0, 1.0, 0.0);
+    Eigen::Vector3d posA(1.0, 0.0, 0.0);
+    Eigen::Vector3d posB(0.0, 1.0, 0.0);
+    Eigen::Vector3d posC(0.0, 0.0, 1.0);
+
+    particles.emplace_back(posA);
+    particles.emplace_back(posB);
+    particles.emplace_back(posC);
+
+    SpatialHash hash(1000, 1.0);
+    hash.build(particles);
+
+    std::vector<int> neighbors;
+    hash.query(particles, queryPos, 2.0, neighbors);    
+
+    EXPECT_EQ(particles.size(), neighbors.size());
+}
+
+TEST(SpatialHash, BuildWithEmptyVectorMakesQueryReturnAnEmptyVector) {
+    std::vector<Particle> particles;
+    Eigen::Vector3d queryPos(0.0, 1.0, 0.0);
+
+    SpatialHash hash(1000, 1.0);
+    hash.build(particles);
+
+    std::vector<int> neighbors;
+    hash.query(particles, queryPos, 1.0, neighbors);
+
+    EXPECT_EQ(0, neighbors.size());
+}
+
+TEST(SpatialHash, ParticleWithBorderPositionDoesNotAppearInQuery) {
+    std::vector<Particle> particles;
+    Eigen::Vector3d queryPos(0.0, 0.0, 0.0);
+    Eigen::Vector3d particlePos(0.0, 1.0, 0.0);
+
+    particles.emplace_back(particlePos);
+
+    SpatialHash hash(1000, 1.0);
+    hash.build(particles);
+
+    std::vector<int> neighbors;
+    hash.query(particles, queryPos, 1.0, neighbors);
+
+    EXPECT_EQ(0, neighbors.size());
+}#include "gtest/gtest.h"
+#include "physics/SphereCollider.hpp"
+
+using namespace Tissu;
+from python.tissu import Simulation, Fabric, Material
+import os
+
+def falling():
+    sim = Simulation(
+        substeps=15,
+        iterations=2,
+        gravity=-9.81,
+        thickness=0.05
+    )
+
+    sim.wind = [0.0, 0.0, 0.0]
+    sim.air_density = 0.1
+
+    sim.add_floor(height=0.0, friction=0.5)
+
+    material = {
+        "density": 0.1,
+        "structural_compliance": 1e-9,
+        "shear_compliance": 1e-8,
+        "bending_compliance": 0.1
+    }
+
+    curtain = Fabric.grid(
+        name="Curtain",
+        rows=80,
+        cols=80,
+        spacing=0.05,
+        material=material,
+        solver=sim.solver
+    )
+
+    sim.add_fabric(curtain)
+    curtain.pin_top_corners(solver=sim.solver, threshold=0.01, compliance=0)
+    Material.apply_preset(curtain, "silk")
+    
+    sim.view()
+
+if __name__ == "__main__":
+    falling()
+

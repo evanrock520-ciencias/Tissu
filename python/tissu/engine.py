@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 class Simulation:
-    def __init__(self, substeps=10, iterations=2, gravity=-9.81, thickness=0.02):
+    def __init__(self, substeps: int = 10, iterations: int = 2, gravity: float = -9.81, thickness: float = 0.02):
         self.world = sdk.World()
         self.solver = sdk.Solver()
         
@@ -87,7 +87,14 @@ class Simulation:
     def collision_compliance(self):
         return self._collision_compliance
     
-    def add_fabric(self, fabric):
+    def add_fabric(self, fabric: Fabric) -> None:
+        """
+        Adds a fabric to the simulation world.
+        If a fabric with the same name already exists, it will be overwritten.
+
+        Args:
+            fabric: The Fabric instance to register.
+        """
         if fabric.name in self.cloth_objects:
             sdk.Logger.warn(f"Fabric '{fabric.name}' already exists. Overwriting.")
 
@@ -104,15 +111,23 @@ class Simulation:
         self.cloth_objects[fabric.name] = fabric
         sdk.Logger.info(f"Successfully added fabric: {fabric.name}")
 
-    def add_floor(self, height=0.0, friction=0.5):
+    def add_floor(self, height: float = 0.0, friction: float =0.5):
+        """
+        Adds a horizontal floor to the simulation.
+
+        Args:
+            height: Vertical position of the floor in world space.
+            friction: Surface friction in the range [0.0, 1.0].
+                    0.0 is completely slippery, 1.0 is fully grippy.
+        """
         self.world.add_plane_collider([0.0, float(height), 0.0], [0.0, 1.0, 0.0], float(friction))
         sdk.Logger.info(f"Added collision floor at Y={height}")
 
-    def add_sphere(self, name, center, radius, friction=0.5):
+    def add_sphere(self, name: str, center: float, radius: float, friction: float = 0.5) -> None:
         self.world.add_sphere_collider(center, float(radius), float(friction))
         sdk.Logger.info(f"Added sphere collider '{name}' at {center}")
     
-    def step(self, dt=1.0/60.0):
+    def step(self, dt: float = 1.0/60.0):
         self.solver.update(self.world, dt)
         
     def get_positions(self) -> np.ndarray:
@@ -120,13 +135,30 @@ class Simulation:
         return np.array([p.get_position() for p in particles], dtype=np.float64)
     
     def reset(self):
+        """Clears the simulation, removing all fabrics, colliders and forces."""
         self.world.clear()
         self.solver.clear()
         self.cloth_objects = {}
         self._aero_forces = {}
         sdk.Logger.info("Simulation world reset.")
         
-    def bake_alembic(self, filepath, start_frame=0, end_frame=120, fps=24.0):
+    def bake_alembic(self, filepath: str, start_frame: int = 0, end_frame: int = 120, fps: float = 24.0) -> bool:
+        """
+        Bakes the simulation to an Alembic (.abc) cache file.
+
+        Advances the simulation from start_frame to end_frame and writes
+        each frame to disk. The simulation state is modified in place.
+
+        Args:
+            filepath:    Output path for the .abc file. Created or overwritten if it exists.
+            start_frame: First frame to bake.
+            end_frame:   Last frame to bake.
+            fps:         Frames per second, used to compute the timestep.
+
+        Returns:
+            True if the file was written successfully, False otherwise.
+        """
+        
         if not self.cloth_objects:
             sdk.Logger.error("No cloth objects found in simulation to bake.")
             return False
@@ -164,7 +196,7 @@ class Simulation:
         sdk.Logger.info(f"Bake completed successfully: {filepath}")
         return True
     
-    def save_snapshot(self, filename, fabric_name):
+    def save_snapshot(self, filename: str, fabric_name: str):
         if fabric_name not in self.cloth_objects:
             sdk.Logger.error(f"Fabric '{fabric_name}' not found.")
             return False
@@ -175,7 +207,7 @@ class Simulation:
         sdk.Logger.info(f"Snapshot saved: {filename}")
         return True
     
-    def view(self, width=1280, height=720, title="Tissu | Live Simulation"):
+    def view(self, width: int = 1280, height: int = 720, title: str = "Tissu | Live Simulation"):
         if not self.cloth_objects:
             sdk.Logger.warn("No cloth objects to visualize.")
             
@@ -209,7 +241,7 @@ class Simulation:
         self.app.shutdown()
         sdk.Logger.info("Viewer closed.")
         
-    def load_config(self, filepath, cloth):
+    def load_config(self, filepath: str, cloth: Fabric):
         fabric_wrapper = self.cloth_objects[cloth]
         native_material = fabric_wrapper.instance.get_material() 
         success = sdk.ConfigLoader.load(filepath, self.solver, self.world, native_material)
@@ -219,7 +251,7 @@ class Simulation:
         else:
             sdk.Logger.error("Failed to load config")
             
-    def save_config(self, filepath, cloth_name=None):
+    def save_config(self, filepath: str, cloth_name: str = None) -> bool:
         if cloth_name and cloth_name in self.cloth_objects:
             mat = self.cloth_objects[cloth_name].instance.get_material()
         elif self.cloth_objects:
@@ -232,7 +264,7 @@ class Simulation:
         return sdk.ConfigLoader.save(filepath, self.solver, self.world, mat)
         
 class Fabric:
-    def __init__(self, name, material):
+    def __init__(self, name: str, material: Material):
         self.name = name
         self.material = material 
         
@@ -249,7 +281,7 @@ class Fabric:
         self._cols = 0
 
     @classmethod
-    def grid(cls, name, rows, cols, spacing, material, solver):
+    def grid(cls, name: str, rows: int, cols: int, spacing: float, material: Material, solver: sdk.Solver) -> Fabric:
         fabric = cls(name, material)
         fabric._rows = rows
         fabric._cols = cols
@@ -259,7 +291,7 @@ class Fabric:
         return fabric
 
     @classmethod
-    def from_obj(cls, name, path, material, solver):
+    def from_obj(cls, name: str, path: str, material: Material, solver: sdk.Solver):
         fabric = cls(name, material)
         success, pos, indices = sdk.OBJLoader.load(path)
         if not success:
@@ -269,7 +301,7 @@ class Fabric:
         factory.build_from_mesh(pos, indices, fabric.instance, solver)
         return fabric
     
-    def update_material(self, density=None, structural=None, shear=None, bending=None):
+    def update_material(self, density: float = None, structural: float = None, shear: float = None, bending: float = None):
         current_mat = self.instance.get_material()
         
         if density is not None: current_mat.density = float(density)
@@ -280,14 +312,14 @@ class Fabric:
         self.instance.set_material(current_mat)
         sdk.Logger.info(f"Updated material for '{self.name}'")
 
-    def get_positions(self, solver):
+    def get_positions(self, solver: sdk.Solver):
         all_particles = solver.get_particles()
         my_indices = self.instance.get_particle_indices()
         
         pos_list = [all_particles[idx].get_position() for idx in my_indices]
         return np.array(pos_list, dtype=np.float64)
 
-    def pin_by_height(self, solver, threshold=0.01, compliance=0.0):
+    def pin_by_height(self, solver: sdk.Solver, threshold: float = 0.01, compliance: float = 0.0):
         pos = self.get_positions(solver)
         my_ids = self.instance.get_particle_indices()
         
@@ -303,7 +335,7 @@ class Fabric:
             
         sdk.Logger.info(f"Fabric '{self.name}': Pinned {len(indices_to_pin)} vertices by height.")
         
-    def pin_top_corners(self, solver, threshold=0.01, compliance=0.0):
+    def pin_top_corners(self, solver: sdk.Solver, threshold: float = 0.01, compliance: float = 0.0):
         pos = self.get_positions(solver)
         my_ids = self.instance.get_particle_indices()
         
@@ -333,7 +365,7 @@ class Fabric:
             
         sdk.Logger.info(f"Fabric '{self.name}': Pinned top corners (IDs: {list(corners_to_pin)})")
         
-    def get_particle_id(self, row, col):
+    def get_particle_id(self, row: int, col: int):
         return self.instance.get_particle_id(row, col)
     
     def get_triangles(self):

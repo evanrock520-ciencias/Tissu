@@ -17,7 +17,7 @@ By combining a high-performance **C++ core** with flexible **Python bindings**, 
 
 ### 1. Clone Repositorie
 
-Clone the repositorie is as simple as
+Clone the repository is as simple as
 
 ```bash
 git clone https://github.com/evanrock520-ciencias/Tissu.git
