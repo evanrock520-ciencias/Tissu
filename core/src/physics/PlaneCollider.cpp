@@ -18,7 +18,6 @@ void PlaneCollider::resolve(std::vector<Particle>& particles, double dt, double 
         double distance = vec.dot(m_normal);
 
         if (distance < thickness) {
-            
             double penetration = thickness - distance;
             Eigen::Vector3d newPosition = particle.getPosition() + m_normal * penetration;
             particle.setPosition(newPosition);
