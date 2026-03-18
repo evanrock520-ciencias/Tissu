@@ -4,6 +4,7 @@ add_executable(unit_tests
     test_pin_constraint.cpp
     test_spatial_hash.cpp
     test_plane_collider.cpp
+    test_sphere_collider.cpp
 )
 
 target_link_libraries(unit_tests 

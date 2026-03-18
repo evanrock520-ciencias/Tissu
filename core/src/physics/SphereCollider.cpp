@@ -20,12 +20,12 @@ void SphereCollider::resolve(std::vector<Particle>& particles, double dt, double
         Eigen::Vector3d vec = particle.getPosition() - m_center;
         double distance = vec.norm();
 
-        if (distance < 1e-6) {
+        if (distance <= 1e-6) {
             vec = Eigen::Vector3d::UnitY() * collisionRadius;
             distance = vec.norm();
         }
 
-        if (distance < collisionRadius) {
+        if (distance <= collisionRadius) {
             Eigen::Vector3d normal = vec.normalized();
             
             Eigen::Vector3d newPosition = m_center + normal * collisionRadius;
