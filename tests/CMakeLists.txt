@@ -5,6 +5,7 @@ add_executable(unit_tests
     test_spatial_hash.cpp
     test_plane_collider.cpp
     test_sphere_collider.cpp
+    test_config_loader.cpp
 )
 
 target_link_libraries(unit_tests 
