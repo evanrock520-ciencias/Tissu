@@ -1,0 +1,15 @@
+{
+    "version": "2.0",
+    "type": "physics",
+    "name": "realtime",
+    "substeps": 8,
+    "iterations": 2,
+    "gravity": [0.0, -9.81, 0.0],
+    "collision": {
+        "thickness": 0.05
+    },
+    "environment": {
+        "wind": [0.0, 0.0, 0.0],
+        "air_density": 0.1
+    }
+}

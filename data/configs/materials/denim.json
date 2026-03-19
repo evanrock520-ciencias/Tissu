@@ -1,0 +1,11 @@
+{
+    "version": "2.0",
+    "type": "material",
+    "name": "denim",
+    "density": 0.45,
+    "compliance": {
+        "structural": 1e-10,
+        "shear": 1e-9,
+        "bending": 0.0005
+    }
+}

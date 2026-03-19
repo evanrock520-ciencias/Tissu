@@ -1,0 +1,11 @@
+{
+    "version": "2.0",
+    "type": "material",
+    "name": "leather",
+    "density": 0.7,
+    "compliance": {
+        "structural": 0.0,
+        "shear": 1e-10,
+        "bending": 1e-6
+    }
+}

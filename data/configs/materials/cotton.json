@@ -1,0 +1,11 @@
+{
+    "version": "2.0",
+    "type": "material",
+    "name": "cotton",
+    "density": 0.2,
+    "compliance": {
+        "structural": 1e-9, 
+        "shear": 1e-8,
+        "bending": 0.01 
+    }
+}

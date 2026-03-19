@@ -1,0 +1,11 @@
+{
+    "version": "2.0",
+    "type": "material",
+    "name": "spandex",
+    "density": 0.15,
+    "compliance": {
+        "structural": 0.005,
+        "shear": 0.005,
+        "bending": 0.1
+    }
+}
