@@ -178,8 +178,10 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     });
 
     py::class_<ConfigLoader>(m, "ConfigLoader")
-        .def_static("load", &ConfigLoader::load)
-        .def_static("save", &ConfigLoader::save);
+        .def_static("load_material", &ConfigLoader::loadMaterial)
+        .def_static("load_physics", &ConfigLoader::loadPhysics)
+        .def_static("save_material", &ConfigLoader::saveMaterial)
+        .def_static("save_physics", &ConfigLoader::savePhysics);
 
     py::class_<Logger>(m, "Logger")
     .def_static("info", &Logger::info, py::arg("message"))
