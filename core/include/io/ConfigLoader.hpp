@@ -41,30 +41,41 @@ class ConfigLoader {
 public:
 
     /**
-     * @brief Loads a configuration from a JSON file.
+     * @brief Loads a material preset from a JSON file.
      * 
      * @param filepath Path to the configuration file.
      * @param solver The solver instance to configure.
-     * @param world Reference to the physics world.
      * @param outMaterial The material object that will be updated with loaded data.
-     * @return true if loading was successful, false otherwise.
      */
-    static bool load(const std::string& filepath, Solver& solver, World& world, ClothMaterial& outMaterial);
+    static void loadMaterial(const std::string& filepath, ClothMaterial& outMaterial);
+
+    /**
+     * @brief Loads a physics preset from a JSON file.
+     * 
+     * @param filepath Path to the configuration file.
+     * @param solver The solver instance to configure.
+     * @param outMaterial The material object that will be updated with loaded data.
+     */
+    static void loadPhysics(const std::string& filepath, Solver& solver, World& world);
 
     /**
      * @brief Saves the current material configuration to a JSON file.
      *
      * @param filepath The destination path where the config file will be created.
+     * @param material The material properties to be serialized.
+     */
+    static void saveMaterial(const std::string& filepath, const ClothMaterial& material, const std::string& name);
+
+    /**
+     * @brief Saves the current physics configuration to a JSON file.
+     *
+     * @param filepath The destination path where the config file will be created.
      * @param solver The solver instance whose parameters need to be saved.
      * @param world The physics world context to include in the configuration.
-     * @param material The material properties to be serialized.
-     * @return true if the file was written successfully, false if the path is invalid or inaccessible.
      */
-    static bool save(const std::string& filepath, const Solver& solver, const World& world, const ClothMaterial& material);
+    static void savePhysics(const std::string& filepath, const Solver& solver, const World& world, const std::string& name);
 
 private:
-
-    private:
     /**
      * @brief Converts a JSON object into an Eigen vector.
      * @param json JSON object containing coordinates 

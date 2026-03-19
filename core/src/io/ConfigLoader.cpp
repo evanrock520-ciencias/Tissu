@@ -8,83 +8,100 @@
 #include <fstream>
 #include <iostream>
 #include <filesystem> 
+#include <stdexcept>
+#include <string>
 
 namespace Tissu {
 
-bool ConfigLoader::load(const std::string& filepath, Solver& solver, World& world, ClothMaterial& outMaterial) {
-    std::cout << "[Debug] Attempting to load config: " << std::filesystem::absolute(filepath) << std::endl;
+void ConfigLoader::loadMaterial(const std::string& filepath, ClothMaterial& outMaterial) {
     std::ifstream file(filepath);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
 
     nlohmann::json data;
     try {
         data = nlohmann::json::parse(file);
     } catch (const nlohmann::json::parse_error& e) {
-        std::cerr << "JSON Parse Error: " << e.what() << std::endl;
-        return false;
-    } 
-
-    if (data.contains("simulation")) {
-        auto sim = data["simulation"];
-        solver.setSubsteps(sim.value("substeps", 10));
-        solver.setIterations(sim.value("iterations", 5));
-
-        if (sim.contains("gravity")) {
-            world.setGravity(jsonToVector(sim["gravity"]));
-        }
+        throw std::runtime_error("Invalid JSON in " + filepath + ": " + e.what());
     }
 
-    if (data.contains("material")) {
-        auto mat = data["material"];
-        auto comp = mat.value("compliance", nlohmann::json::object());
+    if (data["type"] != "material") throw std::invalid_argument("The given JSON is not a material preset.");
 
-        outMaterial.setDensity(mat.value("density", 0.1));
-        outMaterial.setStructuralCompliance(comp.value("structural", 1e-6));
-        outMaterial.setShearCompliance(comp.value("shear", 1e-6));
-        outMaterial.setBendingCompliance(comp.value("bending", 1e-4));
-    }
+    auto comp = data.at("compliance");
 
-    if (data.contains("aerodynamics")) {
-        auto aero = data["aerodynamics"];
-
-        if (aero.contains("wind_velocity")) {
-            world.setWind(jsonToVector(aero["wind_velocity"]));
-        } else {
-            world.setWind(Eigen::Vector3d(5.0, 0.0, 0.0));
-        }
-        world.setAirDensity(aero.value("air_density", 0.1));
-    }
-
-    if (data.contains("collisions")) {
-        auto col = data["collisions"];
-        world.setThickness(col.value("thickness", 0.08));
-    }
-
-    return true;
+    outMaterial.setDensity(data.value("density", 0.1));
+    outMaterial.setStructuralCompliance(comp.value("structural", 1e-6));
+    outMaterial.setShearCompliance(comp.value("shear", 1e-6));
+    outMaterial.setBendingCompliance(comp.value("bending", 1e-4));
 }
 
-bool ConfigLoader::save(const std::string& filepath, const Solver& solver, const World& world, const ClothMaterial& material) {
+void ConfigLoader::loadPhysics(const std::string& filepath, Solver& solver, World& world) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
+
+    nlohmann::json data;
+    try {
+        data = nlohmann::json::parse(file);
+    } catch (const nlohmann::json::parse_error& e) {
+        throw std::runtime_error("Invalid JSON in " + filepath + ": " + e.what());
+    }
+
+    if (data["type"] != "physics") 
+        throw std::invalid_argument("The given JSON is not a physics preset.");
+
+    solver.setSubsteps(data.value("substeps", 10));
+    solver.setIterations(data.value("iterations", 2));
+
+    if (data.contains("gravity"))
+        world.setGravity(jsonToVector(data.at("gravity")));
+
+    if (data.contains("collision"))
+        world.setThickness(data["collision"].value("thickness", 0.02));
+
+    if (data.contains("environment")) {
+        auto env = data.at("environment");
+        if (env.contains("wind"))
+            world.setWind(jsonToVector(env.at("wind")));
+        if (env.contains("air_density"))
+            world.setAirDensity(env.value("air_density", 0.1));
+    }
+}
+
+void ConfigLoader::saveMaterial(const std::string& filepath, const ClothMaterial& material, const std::string& name) {
     std::ofstream file(filepath);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
 
     nlohmann::json data;
 
-    data["simulation"]["substeps"] = solver.getSubsteps();
-    data["simulation"]["iterations"] = solver.getIterations();
-    
-    data["simulation"]["gravity"] = vectorToJson(world.getGravity());
-    data["aerodynamics"]["wind_velocity"] = vectorToJson(world.getWind());
-    data["aerodynamics"]["air_density"] = world.getAirDensity();
-    data["collisions"]["thickness"] = world.getThickness();
-
-    data["material"]["density"] = material.getDensity();
-    data["material"]["compliance"]["structural"] = material.getStructuralCompliance();
-    data["material"]["compliance"]["shear"] = material.getShearCompliance();
-    data["material"]["compliance"]["bending"] = material.getBendingCompliance();
+    data["version"] = "2.0";
+    data["type"] = "material";
+    data["name"] = name;
+    data["density"] = material.getDensity();
+    data["compliance"]["structural"] = material.getStructuralCompliance();
+    data["compliance"]["shear"] = material.getShearCompliance();
+    data["compliance"]["bending"] = material.getBendingCompliance();
 
     file << data.dump(4);
     file.close();
-    return true;
+}
+
+void ConfigLoader::savePhysics(const std::string &filepath, const Solver &solver, const World &world, const std::string &name){
+    std::ofstream file(filepath);
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
+
+    nlohmann::json data;
+
+    data["version"] = "2.0";
+    data["type"] = "physics";
+    data["name"] = name;
+    data["substeps"] = solver.getSubsteps();
+    data["iterations"] = solver.getIterations();
+    data["gravity"] = vectorToJson(world.getGravity());
+    data["collision"]["thickness"] = world.getThickness();
+    data["environment"]["wind"] = vectorToJson(world.getWind());
+    data["environment"]["air_density"] = world.getAirDensity();
+
+    file << data.dump(4);
+    file.close();
 }
 
 Eigen::Vector3d ConfigLoader::jsonToVector(const nlohmann::json& json) {
