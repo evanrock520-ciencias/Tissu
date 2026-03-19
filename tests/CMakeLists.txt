@@ -1,16 +1,16 @@
 add_executable(unit_tests
-    test_particle.cpp
-    test_distance_constraint.cpp
-    test_pin_constraint.cpp
-    test_spatial_hash.cpp
-    test_plane_collider.cpp
-    test_sphere_collider.cpp
-    test_config_loader.cpp
+    physics/test_particle.cpp
+    physics/test_distance_constraint.cpp
+    physics/test_pin_constraint.cpp
+    physics/test_spatial_hash.cpp
+    physics/test_plane_collider.cpp
+    physics/test_sphere_collider.cpp
+    io/test_config_loader.cpp
 )
 
 target_link_libraries(unit_tests 
     PRIVATE 
-        ClothCore 
+        ClothCore
         GTest::gtest_main 
         Eigen3::Eigen
 )

@@ -355,83 +355,100 @@ void AlembicExporter::close() {
 #include <fstream>
 #include <iostream>
 #include <filesystem> 
+#include <stdexcept>
+#include <string>
 
 namespace Tissu {
 
-bool ConfigLoader::load(const std::string& filepath, Solver& solver, World& world, ClothMaterial& outMaterial) {
-    std::cout << "[Debug] Attempting to load config: " << std::filesystem::absolute(filepath) << std::endl;
+void ConfigLoader::loadMaterial(const std::string& filepath, ClothMaterial& outMaterial) {
     std::ifstream file(filepath);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
 
     nlohmann::json data;
     try {
         data = nlohmann::json::parse(file);
     } catch (const nlohmann::json::parse_error& e) {
-        std::cerr << "JSON Parse Error: " << e.what() << std::endl;
-        return false;
-    } 
-
-    if (data.contains("simulation")) {
-        auto sim = data["simulation"];
-        solver.setSubsteps(sim.value("substeps", 10));
-        solver.setIterations(sim.value("iterations", 5));
-
-        if (sim.contains("gravity")) {
-            world.setGravity(jsonToVector(sim["gravity"]));
-        }
+        throw std::runtime_error("Invalid JSON in " + filepath + ": " + e.what());
     }
 
-    if (data.contains("material")) {
-        auto mat = data["material"];
-        auto comp = mat.value("compliance", nlohmann::json::object());
+    if (data["type"] != "material") throw std::invalid_argument("The given JSON is not a material preset.");
 
-        outMaterial.setDensity(mat.value("density", 0.1));
-        outMaterial.setStructuralCompliance(comp.value("structural", 1e-6));
-        outMaterial.setShearCompliance(comp.value("shear", 1e-6));
-        outMaterial.setBendingCompliance(comp.value("bending", 1e-4));
-    }
+    auto comp = data.at("compliance");
 
-    if (data.contains("aerodynamics")) {
-        auto aero = data["aerodynamics"];
-
-        if (aero.contains("wind_velocity")) {
-            world.setWind(jsonToVector(aero["wind_velocity"]));
-        } else {
-            world.setWind(Eigen::Vector3d(5.0, 0.0, 0.0));
-        }
-        world.setAirDensity(aero.value("air_density", 0.1));
-    }
-
-    if (data.contains("collisions")) {
-        auto col = data["collisions"];
-        world.setThickness(col.value("thickness", 0.08));
-    }
-
-    return true;
+    outMaterial.setDensity(data.value("density", 0.1));
+    outMaterial.setStructuralCompliance(comp.value("structural", 1e-6));
+    outMaterial.setShearCompliance(comp.value("shear", 1e-6));
+    outMaterial.setBendingCompliance(comp.value("bending", 1e-4));
 }
 
-bool ConfigLoader::save(const std::string& filepath, const Solver& solver, const World& world, const ClothMaterial& material) {
+void ConfigLoader::loadPhysics(const std::string& filepath, Solver& solver, World& world) {
+    std::ifstream file(filepath);
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
+
+    nlohmann::json data;
+    try {
+        data = nlohmann::json::parse(file);
+    } catch (const nlohmann::json::parse_error& e) {
+        throw std::runtime_error("Invalid JSON in " + filepath + ": " + e.what());
+    }
+
+    if (data["type"] != "physics") 
+        throw std::invalid_argument("The given JSON is not a physics preset.");
+
+    solver.setSubsteps(data.value("substeps", 10));
+    solver.setIterations(data.value("iterations", 2));
+
+    if (data.contains("gravity"))
+        world.setGravity(jsonToVector(data.at("gravity")));
+
+    if (data.contains("collision"))
+        world.setThickness(data["collision"].value("thickness", 0.02));
+
+    if (data.contains("environment")) {
+        auto env = data.at("environment");
+        if (env.contains("wind"))
+            world.setWind(jsonToVector(env.at("wind")));
+        if (env.contains("air_density"))
+            world.setAirDensity(env.value("air_density", 0.1));
+    }
+}
+
+void ConfigLoader::saveMaterial(const std::string& filepath, const ClothMaterial& material, const std::string& name) {
     std::ofstream file(filepath);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
 
     nlohmann::json data;
 
-    data["simulation"]["substeps"] = solver.getSubsteps();
-    data["simulation"]["iterations"] = solver.getIterations();
-    
-    data["simulation"]["gravity"] = vectorToJson(world.getGravity());
-    data["aerodynamics"]["wind_velocity"] = vectorToJson(world.getWind());
-    data["aerodynamics"]["air_density"] = world.getAirDensity();
-    data["collisions"]["thickness"] = world.getThickness();
-
-    data["material"]["density"] = material.getDensity();
-    data["material"]["compliance"]["structural"] = material.getStructuralCompliance();
-    data["material"]["compliance"]["shear"] = material.getShearCompliance();
-    data["material"]["compliance"]["bending"] = material.getBendingCompliance();
+    data["version"] = "2.0";
+    data["type"] = "material";
+    data["name"] = name;
+    data["density"] = material.getDensity();
+    data["compliance"]["structural"] = material.getStructuralCompliance();
+    data["compliance"]["shear"] = material.getShearCompliance();
+    data["compliance"]["bending"] = material.getBendingCompliance();
 
     file << data.dump(4);
     file.close();
-    return true;
+}
+
+void ConfigLoader::savePhysics(const std::string &filepath, const Solver &solver, const World &world, const std::string &name){
+    std::ofstream file(filepath);
+    if (!file.is_open()) throw std::runtime_error("Could not open file: " + filepath);
+
+    nlohmann::json data;
+
+    data["version"] = "2.0";
+    data["type"] = "physics";
+    data["name"] = name;
+    data["substeps"] = solver.getSubsteps();
+    data["iterations"] = solver.getIterations();
+    data["gravity"] = vectorToJson(world.getGravity());
+    data["collision"]["thickness"] = world.getThickness();
+    data["environment"]["wind"] = vectorToJson(world.getWind());
+    data["environment"]["air_density"] = world.getAirDensity();
+
+    file << data.dump(4);
+    file.close();
 }
 
 Eigen::Vector3d ConfigLoader::jsonToVector(const nlohmann::json& json) {
@@ -971,7 +988,7 @@ void PlaneCollider::resolve(std::vector<Particle>& particles, double dt, double 
         Eigen::Vector3d vec = particle.getPosition() - m_origin;
         double distance = vec.dot(m_normal);
 
-        if (distance < thickness) {
+        if (distance <= thickness) {
             double penetration = thickness - distance;
             Eigen::Vector3d newPosition = particle.getPosition() + m_normal * penetration;
             particle.setPosition(newPosition);
@@ -1275,12 +1292,12 @@ void SphereCollider::resolve(std::vector<Particle>& particles, double dt, double
         Eigen::Vector3d vec = particle.getPosition() - m_center;
         double distance = vec.norm();
 
-        if (distance < 1e-6) {
+        if (distance <= 1e-6) {
             vec = Eigen::Vector3d::UnitY() * collisionRadius;
             distance = vec.norm();
         }
 
-        if (distance < collisionRadius) {
+        if (distance <= collisionRadius) {
             Eigen::Vector3d normal = vec.normalized();
             
             Eigen::Vector3d newPosition = m_center + normal * collisionRadius;
@@ -1656,30 +1673,41 @@ class ConfigLoader {
 public:
 
     /**
-     * @brief Loads a configuration from a JSON file.
+     * @brief Loads a material preset from a JSON file.
      * 
      * @param filepath Path to the configuration file.
      * @param solver The solver instance to configure.
-     * @param world Reference to the physics world.
      * @param outMaterial The material object that will be updated with loaded data.
-     * @return true if loading was successful, false otherwise.
      */
-    static bool load(const std::string& filepath, Solver& solver, World& world, ClothMaterial& outMaterial);
+    static void loadMaterial(const std::string& filepath, ClothMaterial& outMaterial);
+
+    /**
+     * @brief Loads a physics preset from a JSON file.
+     * 
+     * @param filepath Path to the configuration file.
+     * @param solver The solver instance to configure.
+     * @param outMaterial The material object that will be updated with loaded data.
+     */
+    static void loadPhysics(const std::string& filepath, Solver& solver, World& world);
 
     /**
      * @brief Saves the current material configuration to a JSON file.
      *
      * @param filepath The destination path where the config file will be created.
+     * @param material The material properties to be serialized.
+     */
+    static void saveMaterial(const std::string& filepath, const ClothMaterial& material, const std::string& name);
+
+    /**
+     * @brief Saves the current physics configuration to a JSON file.
+     *
+     * @param filepath The destination path where the config file will be created.
      * @param solver The solver instance whose parameters need to be saved.
      * @param world The physics world context to include in the configuration.
-     * @param material The material properties to be serialized.
-     * @return true if the file was written successfully, false if the path is invalid or inaccessible.
      */
-    static bool save(const std::string& filepath, const Solver& solver, const World& world, const ClothMaterial& material);
+    static void savePhysics(const std::string& filepath, const Solver& solver, const World& world, const std::string& name);
 
 private:
-
-    private:
     /**
      * @brief Converts a JSON object into an Eigen vector.
      * @param json JSON object containing coordinates 
@@ -3007,7 +3035,7 @@ private:
     bool m_isGridScene;
     int m_initRows, m_initCols;
     double m_initSpacing;
-    char m_configPathBuffer[256] = "data/configs/silk.json";
+    char m_configPathBuffer[256] = "data/configs/materials/silk.json";
 
     std::vector<Eigen::Vector3d> m_originalPositions;
     std::vector<int> m_originalIndices;
@@ -3444,18 +3472,22 @@ void Application::drawUI() {
         ImGui::InputText("Config Path", m_configPathBuffer, sizeof(m_configPathBuffer));
 
         if (ImGui::Button("Load JSON Config")) {
-            if (ConfigLoader::load(m_configPathBuffer, *m_solver, *m_world, *(m_cloth->getMaterial()))) {
-                Logger::info("Configuration loaded successfully from: " + std::string(m_configPathBuffer));
-            } else {
-                Logger::error("Failed to load config: " + std::string(m_configPathBuffer));
+            try {
+                ConfigLoader::loadMaterial(m_configPathBuffer, *(m_cloth->getMaterial()));
+                Logger::info("Material loaded from: " + std::string(m_configPathBuffer));
+            } catch (const std::exception& e) {
+                Logger::error("Failed to load config: " + std::string(e.what()));
             }
         }
         
         ImGui::SameLine();
 
         if (ImGui::Button("Save Current Settings")) {
-            if (ConfigLoader::save("exported_config.json", *m_solver, *m_world, *(m_cloth->getMaterial()))) {
-                Logger::info("Settings saved to exported_config.json");
+            try {
+                ConfigLoader::saveMaterial("exported_config.json", *(m_cloth->getMaterial()), "exported");
+                Logger::info("Material saved to exported_config.json");
+            } catch (const std::exception& e) {
+                Logger::error("Failed to save config: " + std::string(e.what()));
             }
         }
     }
@@ -3862,7 +3894,7 @@ import numpy as np
 import os
 
 class Simulation:
-    def __init__(self, substeps=10, iterations=2, gravity=-9.81, thickness=0.02):
+    def __init__(self, substeps: int = 10, iterations: int = 2, gravity: float = -9.81, thickness: float = 0.02):
         self.world = sdk.World()
         self.solver = sdk.Solver()
         
@@ -3946,7 +3978,14 @@ class Simulation:
     def collision_compliance(self):
         return self._collision_compliance
     
-    def add_fabric(self, fabric):
+    def add_fabric(self, fabric: Fabric) -> None:
+        """
+        Adds a fabric to the simulation world.
+        If a fabric with the same name already exists, it will be overwritten.
+
+        Args:
+            fabric: The Fabric instance to register.
+        """
         if fabric.name in self.cloth_objects:
             sdk.Logger.warn(f"Fabric '{fabric.name}' already exists. Overwriting.")
 
@@ -3963,15 +4002,23 @@ class Simulation:
         self.cloth_objects[fabric.name] = fabric
         sdk.Logger.info(f"Successfully added fabric: {fabric.name}")
 
-    def add_floor(self, height=0.0, friction=0.5):
+    def add_floor(self, height: float = 0.0, friction: float =0.5):
+        """
+        Adds a horizontal floor to the simulation.
+
+        Args:
+            height: Vertical position of the floor in world space.
+            friction: Surface friction in the range [0.0, 1.0].
+                    0.0 is completely slippery, 1.0 is fully grippy.
+        """
         self.world.add_plane_collider([0.0, float(height), 0.0], [0.0, 1.0, 0.0], float(friction))
         sdk.Logger.info(f"Added collision floor at Y={height}")
 
-    def add_sphere(self, name, center, radius, friction=0.5):
+    def add_sphere(self, name: str, center: float, radius: float, friction: float = 0.5) -> None:
         self.world.add_sphere_collider(center, float(radius), float(friction))
         sdk.Logger.info(f"Added sphere collider '{name}' at {center}")
     
-    def step(self, dt=1.0/60.0):
+    def step(self, dt: float = 1.0/60.0):
         self.solver.update(self.world, dt)
         
     def get_positions(self) -> np.ndarray:
@@ -3979,13 +4026,30 @@ class Simulation:
         return np.array([p.get_position() for p in particles], dtype=np.float64)
     
     def reset(self):
+        """Clears the simulation, removing all fabrics, colliders and forces."""
         self.world.clear()
         self.solver.clear()
         self.cloth_objects = {}
         self._aero_forces = {}
         sdk.Logger.info("Simulation world reset.")
         
-    def bake_alembic(self, filepath, start_frame=0, end_frame=120, fps=24.0):
+    def bake_alembic(self, filepath: str, start_frame: int = 0, end_frame: int = 120, fps: float = 24.0) -> bool:
+        """
+        Bakes the simulation to an Alembic (.abc) cache file.
+
+        Advances the simulation from start_frame to end_frame and writes
+        each frame to disk. The simulation state is modified in place.
+
+        Args:
+            filepath:    Output path for the .abc file. Created or overwritten if it exists.
+            start_frame: First frame to bake.
+            end_frame:   Last frame to bake.
+            fps:         Frames per second, used to compute the timestep.
+
+        Returns:
+            True if the file was written successfully, False otherwise.
+        """
+        
         if not self.cloth_objects:
             sdk.Logger.error("No cloth objects found in simulation to bake.")
             return False
@@ -4023,7 +4087,7 @@ class Simulation:
         sdk.Logger.info(f"Bake completed successfully: {filepath}")
         return True
     
-    def save_snapshot(self, filename, fabric_name):
+    def save_snapshot(self, filename: str, fabric_name: str):
         if fabric_name not in self.cloth_objects:
             sdk.Logger.error(f"Fabric '{fabric_name}' not found.")
             return False
@@ -4034,7 +4098,7 @@ class Simulation:
         sdk.Logger.info(f"Snapshot saved: {filename}")
         return True
     
-    def view(self, width=1280, height=720, title="Tissu | Live Simulation"):
+    def view(self, width: int = 1280, height: int = 720, title: str = "Tissu | Live Simulation"):
         if not self.cloth_objects:
             sdk.Logger.warn("No cloth objects to visualize.")
             
@@ -4068,30 +4132,55 @@ class Simulation:
         self.app.shutdown()
         sdk.Logger.info("Viewer closed.")
         
-    def load_config(self, filepath, cloth):
-        fabric_wrapper = self.cloth_objects[cloth]
-        native_material = fabric_wrapper.instance.get_material() 
-        success = sdk.ConfigLoader.load(filepath, self.solver, self.world, native_material)
+    def load_material(self, filepath: str, cloth_name: str) -> None:
+        """
+        Loads material properties from a JSON file and applies them to a fabric.
+
+        Args:
+            filepath:   Path to the material JSON file.
+            cloth_name: Name of the target fabric.
+        """
+        if cloth_name not in self.cloth_objects:
+            raise KeyError(f"Fabric '{cloth_name}' not found in simulation.")
         
-        if success:
-            sdk.Logger.info(f"Config loaded from {filepath}")
-        else:
-            sdk.Logger.error("Failed to load config")
-            
-    def save_config(self, filepath, cloth_name=None):
-        if cloth_name and cloth_name in self.cloth_objects:
-            mat = self.cloth_objects[cloth_name].instance.get_material()
-        elif self.cloth_objects:
-            first = list(self.cloth_objects.values())[0]
-            mat = first.instance.get_material()
-        else:
-            sdk.Logger.error("No fabric to save config from.")
-            return False
-            
-        return sdk.ConfigLoader.save(filepath, self.solver, self.world, mat)
+        fabric = self.cloth_objects[cloth_name]
+        sdk.ConfigLoader.load_material(filepath, fabric.instance.get_material())
+
+    def load_physics(self, filepath: str) -> None:
+        """
+        Loads physics parameters from a JSON file and applies them to the simulation.
+
+        Args:
+            filepath: Path to the physics JSON file.
+        """
+        sdk.ConfigLoader.load_physics(filepath, self.solver, self.world)
+
+    def save_material(self, filepath: str, cloth_name: str) -> None:
+        """
+        Saves the material properties of a fabric to a JSON file.
+
+        Args:
+            filepath:   Destination path for the material JSON file.
+            cloth_name: Name of the fabric whose material will be saved.
+        """
+        if cloth_name not in self.cloth_objects:
+            raise KeyError(f"Fabric '{cloth_name}' not found in simulation.")
+        
+        mat = self.cloth_objects[cloth_name].instance.get_material()
+        sdk.ConfigLoader.save_material(filepath, mat, cloth_name)
+
+    def save_physics(self, filepath: str, name: str = "physics") -> None:
+        """
+        Saves the current physics parameters to a JSON file.
+
+        Args:
+            filepath: Destination path for the physics JSON file.
+            name:     Identifier written into the file.
+        """
+        sdk.ConfigLoader.save_physics(filepath, self.solver, self.world, name)
         
 class Fabric:
-    def __init__(self, name, material):
+    def __init__(self, name: str, material: Material):
         self.name = name
         self.material = material 
         
@@ -4108,7 +4197,7 @@ class Fabric:
         self._cols = 0
 
     @classmethod
-    def grid(cls, name, rows, cols, spacing, material, solver):
+    def grid(cls, name: str, rows: int, cols: int, spacing: float, material: Material, solver: sdk.Solver) -> Fabric:
         fabric = cls(name, material)
         fabric._rows = rows
         fabric._cols = cols
@@ -4118,7 +4207,7 @@ class Fabric:
         return fabric
 
     @classmethod
-    def from_obj(cls, name, path, material, solver):
+    def from_obj(cls, name: str, path: str, material: Material, solver: sdk.Solver):
         fabric = cls(name, material)
         success, pos, indices = sdk.OBJLoader.load(path)
         if not success:
@@ -4128,7 +4217,7 @@ class Fabric:
         factory.build_from_mesh(pos, indices, fabric.instance, solver)
         return fabric
     
-    def update_material(self, density=None, structural=None, shear=None, bending=None):
+    def update_material(self, density: float = None, structural: float = None, shear: float = None, bending: float = None):
         current_mat = self.instance.get_material()
         
         if density is not None: current_mat.density = float(density)
@@ -4139,14 +4228,14 @@ class Fabric:
         self.instance.set_material(current_mat)
         sdk.Logger.info(f"Updated material for '{self.name}'")
 
-    def get_positions(self, solver):
+    def get_positions(self, solver: sdk.Solver):
         all_particles = solver.get_particles()
         my_indices = self.instance.get_particle_indices()
         
         pos_list = [all_particles[idx].get_position() for idx in my_indices]
         return np.array(pos_list, dtype=np.float64)
 
-    def pin_by_height(self, solver, threshold=0.01, compliance=0.0):
+    def pin_by_height(self, solver: sdk.Solver, threshold: float = 0.01, compliance: float = 0.0):
         pos = self.get_positions(solver)
         my_ids = self.instance.get_particle_indices()
         
@@ -4162,7 +4251,7 @@ class Fabric:
             
         sdk.Logger.info(f"Fabric '{self.name}': Pinned {len(indices_to_pin)} vertices by height.")
         
-    def pin_top_corners(self, solver, threshold=0.01, compliance=0.0):
+    def pin_top_corners(self, solver: sdk.Solver, threshold: float = 0.01, compliance: float = 0.0):
         pos = self.get_positions(solver)
         my_ids = self.instance.get_particle_indices()
         
@@ -4192,7 +4281,7 @@ class Fabric:
             
         sdk.Logger.info(f"Fabric '{self.name}': Pinned top corners (IDs: {list(corners_to_pin)})")
         
-    def get_particle_id(self, row, col):
+    def get_particle_id(self, row: int, col: int):
         return self.instance.get_particle_id(row, col)
     
     def get_triangles(self):
@@ -4453,8 +4542,10 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     });
 
     py::class_<ConfigLoader>(m, "ConfigLoader")
-        .def_static("load", &ConfigLoader::load)
-        .def_static("save", &ConfigLoader::save);
+        .def_static("load_material", &ConfigLoader::loadMaterial)
+        .def_static("load_physics", &ConfigLoader::loadPhysics)
+        .def_static("save_material", &ConfigLoader::saveMaterial)
+        .def_static("save_physics", &ConfigLoader::savePhysics);
 
     py::class_<Logger>(m, "Logger")
     .def_static("info", &Logger::info, py::arg("message"))
@@ -4675,7 +4766,7 @@ By combining a high-performance **C++ core** with flexible **Python bindings**, 
 
 ### 1. Clone Repositorie
 
-Clone the repositorie is as simple as
+Clone the repository is as simple as
 
 ```bash
 git clone https://github.com/evanrock520-ciencias/Tissu.git
@@ -4816,6 +4907,8 @@ This project is licensed under the Apache 2.0 License - see the [LICENSE](LICENS
     test_pin_constraint.cpp
     test_spatial_hash.cpp
     test_plane_collider.cpp
+    test_sphere_collider.cpp
+    test_config_loader.cpp
 )
 
 target_link_libraries(unit_tests 
@@ -4827,6 +4920,115 @@ target_link_libraries(unit_tests
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)#include <gtest/gtest.h>
+#include <filesystem>
+#include <stdexcept>
+#include "engine/World.hpp"
+#include "io/ConfigLoader.hpp"
+#include "math/Types.hpp"
+#include "physics/Solver.hpp"
+
+using namespace Tissu;
+namespace fs = std::filesystem;
+
+class ConfigLoaderTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        m_tempFile = fs::temp_directory_path() / "tissu_test_config.json";
+    }
+
+    void TearDown() override {
+        if (fs::exists(m_tempFile))
+            fs::remove(m_tempFile);
+    }
+
+    fs::path m_tempFile;
+};
+
+TEST_F(ConfigLoaderTest, LoadMaterialThrowsIfFileNotFound) {
+    ClothMaterial mat;
+    EXPECT_THROW(
+        ConfigLoader::loadMaterial("nonexistent.json", mat),
+        std::runtime_error
+    );
+}
+
+TEST_F(ConfigLoaderTest, LoadMaterialThrowsIfTypeIsIncorrect) {
+    std::ofstream file(m_tempFile);
+    file << R"({ "version": "2.0", "type": "physics", "name": "test" })";
+    file.close();
+
+    ClothMaterial mat;
+    EXPECT_THROW(
+        ConfigLoader::loadMaterial(m_tempFile.string(), mat),
+        std::invalid_argument
+    );
+}
+
+TEST_F(ConfigLoaderTest, SaveAndLoadMaterialRoundTrip) {
+    ClothMaterial original;
+    original.setDensity(0.12);
+    original.setBendingCompliance(0.01);
+    original.setShearCompliance(0.2);
+    original.setStructuralCompliance(0.6);
+
+    ConfigLoader::saveMaterial(m_tempFile.string(), original, "fur");
+
+    ClothMaterial loaded;
+    ConfigLoader::loadMaterial(m_tempFile.string(), loaded);
+
+    EXPECT_NEAR(loaded.getDensity(), original.getDensity(), 1e-9);
+    EXPECT_NEAR(loaded.getBendingCompliance(), original.getBendingCompliance(), 1e-9);
+    EXPECT_NEAR(loaded.getShearCompliance(), original.getShearCompliance(), 1e-9);
+    EXPECT_NEAR(loaded.getStructuralCompliance(), original.getStructuralCompliance(), 1e-9);
+}
+
+TEST_F(ConfigLoaderTest, LoadPhysicsThrowsIfFileNotFound) {
+    World world;
+    Solver solver;
+    EXPECT_THROW(
+        ConfigLoader::loadPhysics("nonexistent.json", solver, world),
+        std::runtime_error
+    );
+}
+
+TEST_F(ConfigLoaderTest, LoadPhysicsThrowsIfTypeIsIncorrect) {
+    std::ofstream file(m_tempFile);
+    file << R"({ "version": "2.0", "type": "material", "name": "test" })";
+    file.close();
+
+    Solver solver;
+    World world;
+
+    EXPECT_THROW(
+        ConfigLoader::loadPhysics(m_tempFile.string(), solver, world),
+        std::invalid_argument
+    );
+}
+
+TEST_F(ConfigLoaderTest, SaveAndLoadPhysicsRoundTrip) {
+    Solver solver;
+    World world;
+    
+    solver.setSubsteps(20);
+    solver.setIterations(4);
+    world.setGravity(Eigen::Vector3d(0.0, -9.81, 0.0));
+    world.setThickness(0.03);
+    world.setWind(Eigen::Vector3d(5.0, 0.0, 0.0));
+    world.setAirDensity(0.2);
+
+    ConfigLoader::savePhysics(m_tempFile.string(), solver, world, "test");
+
+    Solver loadedSolver;
+    World loadedWorld;
+    ConfigLoader::loadPhysics(m_tempFile.string(), loadedSolver, loadedWorld);
+
+    EXPECT_EQ(loadedSolver.getSubsteps(), solver.getSubsteps());
+    EXPECT_EQ(loadedSolver.getIterations(), solver.getIterations());
+    EXPECT_NEAR(loadedWorld.getThickness(), world.getThickness(), 1e-9);
+    EXPECT_NEAR(loadedWorld.getGravity().y(), world.getGravity().y(), 1e-9);
+    EXPECT_NEAR(loadedWorld.getWind().x(), world.getWind().x(), 1e-9);
+    EXPECT_NEAR(loadedWorld.getAirDensity(), world.getAirDensity(), 1e-9);
+}#include <gtest/gtest.h>
 #include "physics/Particle.hpp"
 #include "physics/DistanceConstraint.hpp"
 
@@ -5344,10 +5546,108 @@ TEST(SpatialHash, ParticleWithBorderPositionDoesNotAppearInQuery) {
 
     EXPECT_EQ(0, neighbors.size());
 }#include "gtest/gtest.h"
+#include <vector>
+#include "physics/Particle.hpp"
 #include "physics/SphereCollider.hpp"
 
 using namespace Tissu;
-from python.tissu import Simulation, Fabric, Material
+
+TEST(SphereCollider, ParticleInsideTheSphereMovesOutside) {
+    Eigen::Vector3d center(0.0, 0.0, 0.0);
+    double radius = 5.0;
+    SphereCollider sphere(center, radius, 0.0);
+
+    Eigen::Vector3d initialPos(0.0, 1.0, 0.0);
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    sphere.resolve(particles, 0.016, 0.0);
+
+    double distance = (particles[0].getPosition() - center).norm();
+
+    EXPECT_NEAR(distance, radius, 1e-6);
+}
+
+TEST(SphereCollider, ParticleOutsideTheSphereDoesNotChangeItsPosition) {
+    Eigen::Vector3d center(0.0, 0.0, 0.0);
+    double radius = 5.0;
+    SphereCollider sphere(center, radius, 0.0);
+
+    Eigen::Vector3d initialPos(8.0, 10.0, 0.0);
+    std::vector<Particle> particles;
+    particles.emplace_back(initialPos);
+
+    sphere.resolve(particles, 0.016, 0.0);
+
+    EXPECT_EQ(particles[0].getPosition().x(), initialPos.x());
+    EXPECT_EQ(particles[0].getPosition().y(), initialPos.y());
+    EXPECT_EQ(particles[0].getPosition().z(), initialPos.z());
+}
+
+TEST(SphereCollider, ParticleInThicknessRangeIsProjectedToSurface) {
+    Eigen::Vector3d center(0.0, 0.0, 0.0);
+    double radius = 5.0;
+    double thickness = 3.0;
+    SphereCollider sphere(center, radius, 0.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(Eigen::Vector3d(0.0, 6.0, 0.0)); 
+
+    sphere.resolve(particles, 0.016, thickness);
+
+    double distance = (particles[0].getPosition() - center).norm();
+    EXPECT_NEAR(distance, radius + thickness, 1e-6);
+}
+
+TEST(SphereCollider, FullFrictionCancelsTangentialVelocity) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    double radius = 2.0;
+    SphereCollider sphere(origin, radius, 1.0); 
+
+    std::vector<Particle> particles;
+    particles.emplace_back(Eigen::Vector3d(0.0, -0.5, 0.0));
+    particles[0].setOldPosition(Eigen::Vector3d(-1.0, -0.5, 0.0));
+
+    sphere.resolve(particles, 0.016, 0.0);
+
+    double velocityX = particles[0].getPosition().x() - particles[0].getOldPosition().x();
+    double velocityZ = particles[0].getPosition().z() - particles[0].getOldPosition().z();
+
+    EXPECT_NEAR(velocityX, 0.0, 1e-9);
+    EXPECT_NEAR(velocityZ, 0.0, 1e-9);
+}
+
+TEST(SphereCollider, NoFrictionDoesNotChangeTangentialVelocity) {
+    Eigen::Vector3d origin(0.0, 0.0, 0.0);
+    double radius = 2.0;
+    SphereCollider sphere(origin, radius, 0.0); 
+
+    std::vector<Particle> particles;
+    particles.emplace_back(Eigen::Vector3d(0.0, -0.5, 0.0));
+    particles[0].setOldPosition(Eigen::Vector3d(-1.0, -0.5, 0.0));
+
+    sphere.resolve(particles, 0.016, 0.0);
+
+    double velocityX = particles[0].getPosition().x() - particles[0].getOldPosition().x();
+
+    EXPECT_NEAR(velocityX, 1, 1e-9);
+}
+
+TEST(SphereCollider, ParticleOnSphereCenterProjectsUpward) {
+    Eigen::Vector3d center(0.0, 0.0, 0.0);
+    double radius = 5.0;
+    SphereCollider sphere(center, radius, 0.0);
+
+    std::vector<Particle> particles;
+    particles.emplace_back(center);
+
+    sphere.resolve(particles, 0.016, 0.1); 
+
+    EXPECT_NEAR(particles[0].getPosition().x(), 0.0, 1e-6);
+    EXPECT_GT(particles[0].getPosition().y(), 0.0);
+    double distance = (particles[0].getPosition() - center).norm();
+    EXPECT_NEAR(distance, radius + 0.1, 1e-6);
+}from python.tissu import Simulation, Fabric, Material
 import os
 
 def falling():
