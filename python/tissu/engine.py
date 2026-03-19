@@ -241,27 +241,52 @@ class Simulation:
         self.app.shutdown()
         sdk.Logger.info("Viewer closed.")
         
-    def load_config(self, filepath: str, cloth: Fabric):
-        fabric_wrapper = self.cloth_objects[cloth]
-        native_material = fabric_wrapper.instance.get_material() 
-        success = sdk.ConfigLoader.load(filepath, self.solver, self.world, native_material)
+    def load_material(self, filepath: str, cloth_name: str) -> None:
+        """
+        Loads material properties from a JSON file and applies them to a fabric.
+
+        Args:
+            filepath:   Path to the material JSON file.
+            cloth_name: Name of the target fabric.
+        """
+        if cloth_name not in self.cloth_objects:
+            raise KeyError(f"Fabric '{cloth_name}' not found in simulation.")
         
-        if success:
-            sdk.Logger.info(f"Config loaded from {filepath}")
-        else:
-            sdk.Logger.error("Failed to load config")
-            
-    def save_config(self, filepath: str, cloth_name: str = None) -> bool:
-        if cloth_name and cloth_name in self.cloth_objects:
-            mat = self.cloth_objects[cloth_name].instance.get_material()
-        elif self.cloth_objects:
-            first = list(self.cloth_objects.values())[0]
-            mat = first.instance.get_material()
-        else:
-            sdk.Logger.error("No fabric to save config from.")
-            return False
-            
-        return sdk.ConfigLoader.save(filepath, self.solver, self.world, mat)
+        fabric = self.cloth_objects[cloth_name]
+        sdk.ConfigLoader.load_material(filepath, fabric.instance.get_material())
+
+    def load_physics(self, filepath: str) -> None:
+        """
+        Loads physics parameters from a JSON file and applies them to the simulation.
+
+        Args:
+            filepath: Path to the physics JSON file.
+        """
+        sdk.ConfigLoader.load_physics(filepath, self.solver, self.world)
+
+    def save_material(self, filepath: str, cloth_name: str) -> None:
+        """
+        Saves the material properties of a fabric to a JSON file.
+
+        Args:
+            filepath:   Destination path for the material JSON file.
+            cloth_name: Name of the fabric whose material will be saved.
+        """
+        if cloth_name not in self.cloth_objects:
+            raise KeyError(f"Fabric '{cloth_name}' not found in simulation.")
+        
+        mat = self.cloth_objects[cloth_name].instance.get_material()
+        sdk.ConfigLoader.save_material(filepath, mat, cloth_name)
+
+    def save_physics(self, filepath: str, name: str = "physics") -> None:
+        """
+        Saves the current physics parameters to a JSON file.
+
+        Args:
+            filepath: Destination path for the physics JSON file.
+            name:     Identifier written into the file.
+        """
+        sdk.ConfigLoader.save_physics(filepath, self.solver, self.world, name)
         
 class Fabric:
     def __init__(self, name: str, material: Material):
