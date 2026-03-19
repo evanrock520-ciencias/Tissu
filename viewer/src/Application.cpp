@@ -261,18 +261,22 @@ void Application::drawUI() {
         ImGui::InputText("Config Path", m_configPathBuffer, sizeof(m_configPathBuffer));
 
         if (ImGui::Button("Load JSON Config")) {
-            if (ConfigLoader::load(m_configPathBuffer, *m_solver, *m_world, *(m_cloth->getMaterial()))) {
-                Logger::info("Configuration loaded successfully from: " + std::string(m_configPathBuffer));
-            } else {
-                Logger::error("Failed to load config: " + std::string(m_configPathBuffer));
+            try {
+                ConfigLoader::loadMaterial(m_configPathBuffer, *(m_cloth->getMaterial()));
+                Logger::info("Material loaded from: " + std::string(m_configPathBuffer));
+            } catch (const std::exception& e) {
+                Logger::error("Failed to load config: " + std::string(e.what()));
             }
         }
         
         ImGui::SameLine();
 
         if (ImGui::Button("Save Current Settings")) {
-            if (ConfigLoader::save("exported_config.json", *m_solver, *m_world, *(m_cloth->getMaterial()))) {
-                Logger::info("Settings saved to exported_config.json");
+            try {
+                ConfigLoader::saveMaterial("exported_config.json", *(m_cloth->getMaterial()), "exported");
+                Logger::info("Material saved to exported_config.json");
+            } catch (const std::exception& e) {
+                Logger::error("Failed to save config: " + std::string(e.what()));
             }
         }
     }

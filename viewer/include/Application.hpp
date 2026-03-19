@@ -84,7 +84,7 @@ private:
     bool m_isGridScene;
     int m_initRows, m_initCols;
     double m_initSpacing;
-    char m_configPathBuffer[256] = "data/configs/silk.json";
+    char m_configPathBuffer[256] = "data/configs/materials/silk.json";
 
     std::vector<Eigen::Vector3d> m_originalPositions;
     std::vector<int> m_originalIndices;
