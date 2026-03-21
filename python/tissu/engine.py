@@ -105,11 +105,48 @@ class Simulation:
             self.wind, 
             self.air_density
         )
+        
+        fabric._solver = self.solver
         self._aero_forces[fabric.name] = aero
         self.world.add_force(aero)
 
         self.cloth_objects[fabric.name] = fabric
         sdk.Logger.info(f"Successfully added fabric: {fabric.name}")
+        
+    def create_grid(self, name: str, rows: int, cols: int, spacing: float, material=None) -> "Fabric":
+        if name in self.cloth_objects:
+            raise ValueError(f"Fabric '{name}' already exists in simulation.")
+        
+        resolved = self._resolve_material(material)
+        fabric = Fabric.grid(name, cols, rows, spacing, resolved, self.solver)
+        self.add_fabric(fabric)
+        
+        return fabric
+    
+    def create_from_obj(self, name: str, path: str, material=None):
+        if name in self.cloth_objects:
+            raise ValueError(f"Fabric '{name}' already exists in simulation.")
+        
+        resolved = self._resolve_material(material)
+        fabric = Fabric.from_obj(name, path, resolved, self.solver)
+        self.add_fabric(fabric)
+        
+        return fabric
+    
+    def _resolve_material(self, material) -> Material:
+        if material is None:
+            return Material.from_preset("cotton")
+        elif isinstance(material, str):
+            return Material.from_preset(material)
+        elif isinstance(material, dict):
+            return Material.from_dict(material)
+        elif isinstance(material, Material):
+            return material
+        else:
+            raise TypeError(
+                f"Invalid material type: {type(material).__name__}. "
+                f"Expected str, dict, Material or None."
+            )
 
     def add_floor(self, height: float = 0.0, friction: float =0.5):
         """
@@ -292,16 +329,8 @@ class Fabric:
     def __init__(self, name: str, material: Material):
         self.name = name
         self.material = material 
-        
-        self._material_instance = sdk.ClothMaterial(
-            float(material["density"]),
-            float(material["structural_compliance"]),
-            float(material["shear_compliance"]),
-            float(material["bending_compliance"]),
-        
-        )
-        
-        self.instance = sdk.Cloth(name, self._material_instance)
+        self.instance = sdk.Cloth(name, material.native)
+        self._solver = None
         self._rows = 0
         self._cols = 0
 
@@ -337,15 +366,16 @@ class Fabric:
         self.instance.set_material(current_mat)
         sdk.Logger.info(f"Updated material for '{self.name}'")
 
-    def get_positions(self, solver: sdk.Solver):
-        all_particles = solver.get_particles()
+    def get_positions(self) -> np.ndarray:
+        all_particles = self._solver.get_particles()
         my_indices = self.instance.get_particle_indices()
-        
-        pos_list = [all_particles[idx].get_position() for idx in my_indices]
-        return np.array(pos_list, dtype=np.float64)
+        return np.array([all_particles[idx].get_position() for idx in my_indices], dtype=np.float64)
 
-    def pin_by_height(self, solver: sdk.Solver, threshold: float = 0.01, compliance: float = 0.0):
-        pos = self.get_positions(solver)
+    def pin_by_height(self, threshold: float = 0.01, compliance: float = 0.0):
+        if self._solver is None:
+            raise RuntimeError("Fabric must be added to a Simulation before pinning.")
+        
+        pos = self.get_positions()
         my_ids = self.instance.get_particle_indices()
         
         max_y = np.max(pos[:, 1])
@@ -356,12 +386,15 @@ class Fabric:
         for idx in indices_to_pin:
             global_id = my_ids[idx]
             target_pos = pos[idx]
-            solver.add_pin(global_id, target_pos, compliance)
+            self._solver.add_pin(global_id, target_pos, compliance)
             
         sdk.Logger.info(f"Fabric '{self.name}': Pinned {len(indices_to_pin)} vertices by height.")
         
-    def pin_top_corners(self, solver: sdk.Solver, threshold: float = 0.01, compliance: float = 0.0):
-        pos = self.get_positions(solver)
+    def pin_top_corners(self, threshold: float = 0.01, compliance: float = 0.0):
+        if self._solver is None:
+            raise RuntimeError("Fabric must be added to a Simulation before pinning.")
+        
+        pos = self.get_positions()
         my_ids = self.instance.get_particle_indices()
         
         max_y = np.max(pos[:, 1])
@@ -386,7 +419,7 @@ class Fabric:
         for idx in corners_to_pin:
             global_id = my_ids[idx]
             target_pos = pos[idx]
-            solver.add_pin(global_id, target_pos, compliance)
+            self._solver.add_pin(global_id, target_pos, compliance)
             
         sdk.Logger.info(f"Fabric '{self.name}': Pinned top corners (IDs: {list(corners_to_pin)})")
         
@@ -397,51 +430,116 @@ class Fabric:
         return self.instance.get_triangles()
     
 class Material:
-    PRESETS = {
-        "silk": {
-            "density": 0.1, 
-            "structural_compliance": 1e-9, 
-            "shear_compliance": 1e-8, 
-            "bending_compliance": 0.1
-        },
-        "cotton": {
-            "density": 0.2, 
-            "structural_compliance": 1e-9, 
-            "shear_compliance": 1e-8, 
-            "bending_compliance": 0.01
-        },
-        "denim": {
-            "density": 0.45, 
-            "structural_compliance": 1e-10, 
-            "shear_compliance": 1e-9, 
-            "bending_compliance": 0.0005
-        },
-        "leather": {
-            "density": 0.7, 
-            "structural_compliance": 0.0, 
-            "shear_compliance": 1e-10, 
-            "bending_compliance": 1e-6
-        },
-        "spandex": {
-            "density": 0.15, 
-            "structural_compliance": 0.005, 
-            "shear_compliance": 0.005, 
-            "bending_compliance": 0.1
-        }
+    
+    _BUILTIN_PRESETS = {
+        "silk":    (0.1,  1e-9,  1e-8,  0.1),
+        "cotton":  (0.2,  1e-9,  1e-8,  0.01),
+        "denim":   (0.45, 1e-10, 1e-9,  0.0005),
+        "leather": (0.7,  0.0,   1e-10, 1e-6),
+        "spandex": (0.15, 0.005, 0.005, 0.1),
     }
 
-    @staticmethod
-    def apply_preset(fabric_obj, preset_name):
-        if preset_name not in Material.PRESETS:
-            sdk.Logger.warn(f"Material preset '{preset_name}' not found.")
-            return
+    def __init__(self, density=0.1, structural=1e-9, shear=1e-8, bending=0.01):
+        if density <= 0:
+            raise ValueError("Density must be greater than 0.")
+        if any(v < 0 for v in [structural, shear, bending]):
+            raise ValueError("Compliance values must be >= 0.")
 
-        mat_data = Material.PRESETS[preset_name]
-        
-        fabric_obj.update_material(
-            density=mat_data["density"],
-            structural=mat_data["structural_compliance"],
-            shear=mat_data["shear_compliance"],
-            bending=mat_data["bending_compliance"]
+        self._native = sdk.ClothMaterial(
+            float(density),
+            float(structural),
+            float(shear),
+            float(bending)
         )
-        sdk.Logger.info(f"Applied '{preset_name}' material to {fabric_obj.name}")
+
+    @classmethod
+    def from_preset(cls, name: str, presets_path: str = None) -> "Material":
+        """
+        Creates a Material from a named preset.
+        
+        Tries to load from a JSON file if presets_path is provided.
+        Falls back to built-in presets if the file is not found.
+
+        Args:
+            name:         Preset name. Built-in options: silk, cotton, denim, leather, spandex.
+            presets_path: Optional path to the materials directory.
+
+        Raises:
+            ValueError: If the preset name is not found in built-in presets.
+        """
+        if presets_path:
+            filepath = os.path.join(presets_path, f"{name}.json")
+            if os.path.exists(filepath):
+                try:
+                    mat = cls()
+                    sdk.ConfigLoader.load_material(filepath, mat._native)
+                    return mat
+                except Exception as e:
+                    sdk.Logger.warn(f"Could not load preset from {filepath}: {e}. Falling back to built-in.")
+
+        if name not in cls._BUILTIN_PRESETS:
+            raise ValueError(
+                f"Unknown preset: '{name}'. "
+                f"Available: {list(cls._BUILTIN_PRESETS.keys())}"
+            )
+
+        return cls(*cls._BUILTIN_PRESETS[name])
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Material":
+        """
+        Creates a Material from a dictionary of properties.
+
+        Args:
+            data: Dictionary with keys: density, structural_compliance,
+                  shear_compliance, bending_compliance.
+        """
+        return cls(
+            density=data.get("density", 0.1),
+            structural=data.get("structural_compliance", 1e-9),
+            shear=data.get("shear_compliance", 1e-8),
+            bending=data.get("bending_compliance", 0.01)
+        )
+
+    @property
+    def density(self): return self._native.density
+    @density.setter
+    def density(self, v):
+        if float(v) <= 0:
+            raise ValueError("Density must be greater than 0.")
+        self._native.density = float(v)
+
+    @property
+    def structural(self): return self._native.structural_compliance
+    @structural.setter
+    def structural(self, v):
+        if float(v) < 0:
+            raise ValueError("Structural compliance must be >= 0.")
+        self._native.structural_compliance = float(v)
+
+    @property
+    def shear(self): return self._native.shear_compliance
+    @shear.setter
+    def shear(self, v):
+        if float(v) < 0:
+            raise ValueError("Shear compliance must be >= 0.")
+        self._native.shear_compliance = float(v)
+
+    @property
+    def bending(self): return self._native.bending_compliance
+    @bending.setter
+    def bending(self, v):
+        if float(v) < 0:
+            raise ValueError("Bending compliance must be >= 0.")
+        self._native.bending_compliance = float(v)
+
+    @property
+    def native(self) -> "sdk.ClothMaterial":
+        """Returns the underlying C++ ClothMaterial."""
+        return self._native
+
+    def __repr__(self):
+        return (
+            f"Material(density={self.density}, structural={self.structural}, "
+            f"shear={self.shear}, bending={self.bending})"
+        )
