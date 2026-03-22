@@ -148,6 +148,8 @@ Since Tissu exports standard Alembic files, visualizing the result is straightfo
 4.  Select `data/animations/falling.abc`.
 5.  Press **Play**.
 
+![Example of Blender Animation](docs/videos/curtain.gif)
+
 ---
 
 ## 📄 License
