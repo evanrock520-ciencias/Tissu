@@ -113,7 +113,7 @@ class Simulation:
         self.cloth_objects[fabric.name] = fabric
         sdk.Logger.info(f"Successfully added fabric: {fabric.name}")
         
-    def create_grid(self, name: str, rows: int, cols: int, spacing: float, material=None) -> "Fabric":
+    def create_grid(self, name: str, rows: int, cols: int, spacing: float, material=None) -> "Fabric":        
         if name in self.cloth_objects:
             raise ValueError(f"Fabric '{name}' already exists in simulation.")
         

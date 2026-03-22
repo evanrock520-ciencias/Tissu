@@ -6,7 +6,7 @@ def falling():
     sim.add_floor(height=0.0, friction=0.5)
 
     curtain = sim.create_grid("Curtain", rows=80, cols=80, spacing=0.05, material="silk")
-    curtain.pin_top_corners()
+    curtain.pin_by_height(threshold=0.2)
 
     sim.view()
 

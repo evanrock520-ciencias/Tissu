@@ -15,14 +15,12 @@ void DistanceConstraint::solve(std::vector<Particle>& particles, double dt) {
     Eigen::Vector3d delta = pA.getPosition() - pB.getPosition();
     double currentLength = delta.norm();
 
-    if (currentLength < 1e-6)
-        return;
+    if (currentLength < 1e-6) return;
 
     double wA = pA.getInverseMass();
     double wB = pB.getInverseMass();
     double wSum = wA + wB;
-    if (wSum == 0.0)
-        return;
+    if (wSum == 0.0) return;
 
     Eigen::Vector3d n = delta / currentLength;
     double C = currentLength - m_restLength;  
@@ -33,6 +31,7 @@ void DistanceConstraint::solve(std::vector<Particle>& particles, double dt) {
 
     pA.setPosition(pA.getPosition() + wA * n * deltaLambda);
     pB.setPosition(pB.getPosition() - wB * n * deltaLambda);
+
 }
 
 }
