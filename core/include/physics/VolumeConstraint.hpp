@@ -6,7 +6,7 @@
 #include <vector>
 namespace Tissu {
 
-class VolumeConstraint : Constraint {
+class VolumeConstraint : public Constraint {
 public:
     VolumeConstraint(const std::vector<Triangle>& triangles, const std::vector<Particle>& particles, double compliance);
     void solve(std::vector<Particle>& particles, double dt) override;

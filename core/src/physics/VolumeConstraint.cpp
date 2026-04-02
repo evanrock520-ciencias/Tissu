@@ -15,21 +15,19 @@ VolumeConstraint::VolumeConstraint(const std::vector<Triangle>& triangles, const
             sum += posA.dot(posB.cross(posC));
         }
 
-        m_restVolume = std::abs((sum / 6.0));
+        m_restVolume = std::abs(sum / 6.0);
     }
 
 double VolumeConstraint::computeVolume(const std::vector<Particle>& particles) const {
     double sum = 0;
-        for (auto& tri : m_triangles) {
-            Eigen::Vector3d posA = particles[tri.a].getPosition();
-            Eigen::Vector3d posB = particles[tri.b].getPosition();
-            Eigen::Vector3d posC = particles[tri.c].getPosition();
+    for (auto& tri : m_triangles) {
+        Eigen::Vector3d posA = particles[tri.a].getPosition();
+        Eigen::Vector3d posB = particles[tri.b].getPosition();
+        Eigen::Vector3d posC = particles[tri.c].getPosition();
 
-            sum += posA.dot(posB.cross(posC));
-        }
-
-    double restVolume = std::abs((sum / 6.0));
-    return restVolume;
+        sum += posA.dot(posB.cross(posC));
+    }
+    return std::abs(sum / 6.0); 
 }
 
 void VolumeConstraint::solve(std::vector<Particle>& particles, double dt) {
@@ -57,6 +55,7 @@ void VolumeConstraint::solve(std::vector<Particle>& particles, double dt) {
     }
 
     double deltaLambda = (-C - alphaHat * m_lambda) / denom;
+    m_lambda += deltaLambda;
 
     for (size_t i = 0; i < particles.size(); i++) {
         if (gradients[i].isZero()) continue;

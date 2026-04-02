@@ -365,6 +365,22 @@ class Fabric:
     
         self.instance.set_material(current_mat)
         sdk.Logger.info(f"Updated material for '{self.name}'")
+        
+    def enable_volume_preservation(self, compliance=1e-4):
+        if self._solver is None:
+            raise RuntimeError("Fabric must be added to a Simulation before enabling volume preservation.")
+        
+        if not self.instance.is_closed():
+            raise RuntimeError(f"Fabric '{self.name}' is not a closed mesh.")
+        
+        rest_volume = self._solver.add_volume_constraint(
+            self.instance.get_triangles_native(),
+            self._solver.get_particles(),
+            compliance
+        )
+        
+        self.instance.set_rest_volume(rest_volume)
+        return rest_volume
 
     def get_positions(self) -> np.ndarray:
         all_particles = self._solver.get_particles()

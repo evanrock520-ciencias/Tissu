@@ -18,6 +18,7 @@
 
 #include "math/Types.hpp"
 #include <Eigen/Dense>
+#include <map>
 #include <vector>
 #include <memory>
 
@@ -38,18 +39,13 @@ public:
                         Solver& solver);
 
 private:
-    struct Edge {
-        int v1, v2;
-        Edge(int a, int b) : v1(std::min(a, b)), v2(std::max(a, b)) {}
-        bool operator<(const Edge& other) const {
-            return v1 < other.v1 || (v1 == other.v1 && v2 < other.v2);
-        }
-    };
+    bool isClosed() const;
 
     int getOppositeVertex(const Triangle& tri, int v1, int v2) const;
     double calculateInitialAngle(int id1, int id2, int id3, int id4, const Solver& solver) const;
     
     void computePhysicalAttributes(Cloth& cloth, Solver& solver) const;
+
 };
 
 } 

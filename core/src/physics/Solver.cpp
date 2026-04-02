@@ -10,6 +10,7 @@
 #include "physics/Collider.hpp"
 #include "physics/Force.hpp"
 #include "physics/PinConstraint.hpp"
+#include "physics/VolumeConstraint.hpp"
 #include <Eigen/Dense>
 #include <memory>
 
@@ -102,6 +103,13 @@ namespace Tissu {
 
     void Solver::addPin(int id, const Eigen::Vector3d& pos, double compliance) {
         m_constraints.push_back(std::make_unique<PinConstraint>(id, pos, compliance));
+    }
+    
+    double Solver::addVolumeConstraint(const std::vector<Triangle>& triangles, const std::vector<Particle>& particles, double compliance) {
+        auto constraint = std::make_unique<VolumeConstraint>(triangles, particles, compliance);
+        double restVolume = constraint->getRestVolume();
+        m_constraints.push_back(std::move(constraint));
+        return restVolume;
     }
 
     void Solver::addMassToParticle(int id, double mass) {

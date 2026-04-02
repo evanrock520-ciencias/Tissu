@@ -138,6 +138,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("get_substeps", &Solver::getSubsteps)
         .def("add_distance_constraint", &Solver::addDistanceConstraint)
         .def("add_bending_constraint", &Solver::addBendingConstraint)
+        .def("add_volume_constraint", &Solver::addVolumeConstraint)
         .def("add_pin", &Solver::addPin)
         .def("soft_reset", &Solver::softReset)
         .def("set_collision_compliance", &Solver::setCollisionCompliance);
@@ -156,6 +157,9 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("get_particle_id", &Cloth::getParticleID, py::arg("row"), py::arg("col"))
         .def("get_material", &Cloth::getMaterial)
         .def("set_material", &Cloth::setMaterial)
+        .def("is_closed", &Cloth::isClosed)
+        .def("get_rest_volume", &Cloth::getRestVolume)
+        .def("set_rest_volume", &Cloth::setRestVolume)
         .def("get_particle_indices", &Cloth::getParticleIndices)
         .def("get_aerofaces", &Cloth::getAeroFaces)
         .def("get_triangles", [](const Cloth& cloth) {
@@ -164,6 +168,9 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
                 flat.push_back(t.a); flat.push_back(t.b); flat.push_back(t.c);
             }
             return flat;
+        })
+        .def("get_triangles_native", [](const Cloth& cloth) {
+            return cloth.getTriangles();
         });
 
     py::class_<OBJLoader>(m, "OBJLoader")

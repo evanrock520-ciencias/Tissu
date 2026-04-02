@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <algorithm>
 namespace Tissu {
 
 /**
@@ -26,6 +27,14 @@ namespace Tissu {
 struct Triangle {
     int a, b, c;
     Triangle(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
+};
+
+struct Edge {
+    int v1, v2;
+    Edge(int a, int b) : v1(std::min(a, b)), v2(std::max(a, b)) {}
+    bool operator<(const Edge& other) const {
+    return v1 < other.v1 || (v1 == other.v1 && v2 < other.v2);
+    }
 };
 
 /**

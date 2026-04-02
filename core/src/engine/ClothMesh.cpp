@@ -6,6 +6,7 @@
 #include "math/Types.hpp"
 #include "physics/Solver.hpp"
 #include "physics/Particle.hpp"
+#include "math/Types.hpp"
 #include <cmath>
 #include <fstream>
 #include <map>
@@ -191,6 +192,5 @@ void ClothMesh::computePhysicalAttributes(Cloth& cloth, Solver& solver) const {
         cloth.addAeroFace(triangle.a, triangle.b, triangle.c);
     }
 }
-
 
 }

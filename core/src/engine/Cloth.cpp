@@ -21,6 +21,19 @@ namespace Tissu {
         m_visualEdges.push_back(idB); 
     }
 
+    bool Cloth::isClosed() const {
+        std::map<Edge, int> edgeCount;
+        for (const auto& tri : m_triangles) {
+            edgeCount[{tri.a, tri.b}]++;
+            edgeCount[{tri.b, tri.c}]++;
+            edgeCount[{tri.c, tri.a}]++;
+        }
+        for (const auto& [edge, count] : edgeCount) {
+            if (count != 2) return false;
+        }
+        return true;
+    }
+
     void Cloth::clear() {
         m_particleIndices.clear();
         m_triangles.clear();

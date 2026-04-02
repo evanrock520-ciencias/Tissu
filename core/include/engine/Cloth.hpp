@@ -18,9 +18,12 @@
 
 #include "math/Types.hpp"
 #include "physics/AerodynamicForce.hpp"
+#include <cmath>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
+#include "math/Types.hpp"
 
 namespace Tissu {
 
@@ -76,6 +79,7 @@ public:
     void setMaterial(std::shared_ptr<ClothMaterial> material);
     void setGridDimensions(int rows, int cols);
     void setTopology(ClothTopology topology);
+    inline void setRestVolume(double restVolume) { m_restVolume = restVolume; }
 
     inline const std::string& getName() const { return m_name; }
     inline const ClothTopology getTopology() const { return m_topology; }
@@ -86,12 +90,15 @@ public:
     inline const std::vector<AeroFace>& getAeroFaces() const { return m_faces; }
     inline const int getRows() const { return m_gridRows; }
     inline const int getCols() const { return m_gridCols; }
+    inline const double getRestVolume() const { return m_restVolume; }
 
     bool isGrid() const { return m_topology == ClothTopology::Grid; }
+    bool isClosed() const;
 
 private:
     std::string m_name;
     ClothTopology m_topology;
+    std::map<Edge, int> m_edgeFaceCount;
     std::shared_ptr<ClothMaterial> m_material;
     std::vector<int> m_particleIndices;
     std::vector<Triangle> m_triangles;
@@ -99,6 +106,7 @@ private:
     std::vector<AeroFace> m_faces;
     int m_gridRows;
     int m_gridCols;
+    double m_restVolume = INFINITY;
 };
 
 }

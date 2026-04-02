@@ -1,6 +1,7 @@
 // Copyright 2026 Evan M.
 // SPDX-License-Identifier: Apache-2.0
 
+#include <memory>
 #include <pybind11/cast.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
@@ -25,6 +26,7 @@
 #include "io/OBJLoader.hpp"
 #include "io/OBJExporter.hpp"
 #include "io/ConfigLoader.hpp"
+#include "physics/VolumeConstraint.hpp"
 #include "utils/Logger.hpp"
 #include "math/Types.hpp"
 #include "Application.hpp"
@@ -92,6 +94,11 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     py::class_<BendingConstraint, Constraint, std::unique_ptr<BendingConstraint>>(m, "BendingConstraint")
         .def(py::init<int, int, int, int, double, double>(), py::arg("idA"), py::arg("idB"), py::arg("idC"), py::arg("idD"), py::arg("restAngle"), py::arg("compliance"));
 
+    py::class_<VolumeConstraint, Constraint, std::unique_ptr<VolumeConstraint>>(m, "VolumeConstraint")
+        .def(py::init<const std::vector<Triangle>&, const std::vector<Particle>&, double>(),
+            py::arg("triangles"), py::arg("particles"), py::arg("compliance"))
+        .def("get_rest_volume", &VolumeConstraint::getRestVolume);
+
     py::class_<Collider, std::unique_ptr<Collider>>(m, "Collider")
         .def("get_friction", &Collider::getFriction)
         .def("set_friction", &Collider::setFriction);
@@ -140,6 +147,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("get_substeps", &Solver::getSubsteps)
         .def("add_distance_constraint", &Solver::addDistanceConstraint)
         .def("add_bending_constraint", &Solver::addBendingConstraint)
+        .def("add_volume_constraint", &Solver::addVolumeConstraint)
         .def("add_pin", &Solver::addPin)
         .def("soft_reset", &Solver::softReset)
         .def("set_collision_compliance", &Solver::setCollisionCompliance);
@@ -157,6 +165,9 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("get_name", &Cloth::getName)
         .def("get_particle_id", &Cloth::getParticleID, py::arg("row"), py::arg("col"))
         .def("get_material", &Cloth::getMaterial)
+        .def("is_closed", &Cloth::isClosed)
+        .def("get_rest_volume", &Cloth::getRestVolume)
+        .def("set_rest_volume", &Cloth::setRestVolume)
         .def("set_material", &Cloth::setMaterial)
         .def("get_particle_indices", &Cloth::getParticleIndices)
         .def("get_aerofaces", &Cloth::getAeroFaces)
@@ -166,6 +177,9 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
                 flat.push_back(t.a); flat.push_back(t.b); flat.push_back(t.c);
             }
             return flat;
+        })
+        .def("get_triangles_native", [](const Cloth& cloth) {
+            return cloth.getTriangles();
         });
 
     py::class_<OBJLoader>(m, "OBJLoader")
