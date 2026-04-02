@@ -23,7 +23,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "math/Types.hpp"
 
 namespace Tissu {
 
