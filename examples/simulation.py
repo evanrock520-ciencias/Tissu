@@ -17,14 +17,10 @@ def pillow():
         bending=1e-5     
     )
     
+    pillow.pin_top_corners()
     rest_vol = pillow.enable_volume_preservation(compliance=0.0)
     
-    sim.bake_alembic(
-        filepath="data/animations/pillow.abc",
-        start_frame=0,
-        end_frame=120,
-        fps=60
-    )
+    sim.view()
 
 if __name__ == "__main__":
     pillow()
