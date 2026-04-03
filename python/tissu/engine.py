@@ -179,7 +179,7 @@ class Simulation:
         self._aero_forces = {}
         sdk.Logger.info("Simulation world reset.")
         
-    def bake_alembic(self, filepath: str, start_frame: int = 0, end_frame: int = 120, fps: float = 24.0) -> bool:
+    def bake_alembic(self, filepath: str, start_frame: int = 0, end_frame: int = 120, fps: float = 60.0) -> bool:
         """
         Bakes the simulation to an Alembic (.abc) cache file.
 
@@ -366,7 +366,22 @@ class Fabric:
         self.instance.set_material(current_mat)
         sdk.Logger.info(f"Updated material for '{self.name}'")
         
-    def enable_volume_preservation(self, compliance=1e-4):
+    def enable_volume_preservation(self, compliance=1e-4) -> float:
+        """
+        Adds internal pressure to a closed mesh to maintain it's volume.
+        For instance, this function could be used to simulate a pillow or puffy jackets.
+        
+        Args: 
+            compliance: Inverse of stiffness. Lower values make the volume rigid
+            while higher values allow more compression.
+            
+        Returns:
+            float: The calculated rest volume of the mesh.
+            
+        Raises:
+            RuntimeError: If the fabric isn't in a simulation or the mesh isn't closed.
+
+        """
         if self._solver is None:
             raise RuntimeError("Fabric must be added to a Simulation before enabling volume preservation.")
         
@@ -383,6 +398,10 @@ class Fabric:
         return rest_volume
 
     def get_positions(self) -> np.ndarray:
+        """
+        Returns the particle's positions of the Fabric.
+        """
+        
         all_particles = self._solver.get_particles()
         my_indices = self.instance.get_particle_indices()
         return np.array([all_particles[idx].get_position() for idx in my_indices], dtype=np.float64)

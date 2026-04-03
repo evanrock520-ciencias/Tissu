@@ -5,6 +5,7 @@ def pillow():
     sim.wind = [0.0, 0.0, 0.0]
     
     sim.add_floor(height=-1.0, friction=1.0)
+    sim.add_sphere(name="sphere", center=[0.0, 0.0, 0.0], radius=0.8)
 
     pillow = sim.create_from_obj(
         name="pillow",
@@ -17,7 +18,6 @@ def pillow():
         bending=1e-5     
     )
     
-    pillow.pin_top_corners()
     rest_vol = pillow.enable_volume_preservation(compliance=0.0)
     
     sim.view()

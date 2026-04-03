@@ -17,6 +17,7 @@
 #pragma once
 
 #include "physics/Collider.hpp"
+#include "Eigen/Dense"
 
 namespace Tissu {
 

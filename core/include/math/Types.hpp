@@ -29,6 +29,10 @@ struct Triangle {
     Triangle(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
 };
 
+/**
+ * @brief Represents a conecction between two vertices.
+ * 
+ */
 struct Edge {
     int v1, v2;
     Edge(int a, int b) : v1(std::min(a, b)), v2(std::max(a, b)) {}
