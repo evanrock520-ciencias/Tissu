@@ -51,6 +51,7 @@ public:
     void addBendingConstraint(int a, int b, int c, int d, double restAngle, double compliance);
     double addVolumeConstraint(const std::vector<Triangle>& triangles, const std::vector<Particle>& particles, double compliance);
     void addPin(int id, const Eigen::Vector3d& pos, double compliance = 0.0);
+    void removePin(int id);
 
     void softReset();
 

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <omp.h>
+#include <algorithm>
 
 #include "physics/Solver.hpp"
 #include "engine/World.hpp"
@@ -103,6 +104,19 @@ namespace Tissu {
 
     void Solver::addPin(int id, const Eigen::Vector3d& pos, double compliance) {
         m_constraints.push_back(std::make_unique<PinConstraint>(id, pos, compliance));
+    }
+
+    void Solver::removePin(int id) {
+        // Eliminar todos los pin constraints de esta partícula
+        m_constraints.erase(
+            std::remove_if(m_constraints.begin(), m_constraints.end(),
+                [id](const std::unique_ptr<Constraint>& c) {
+                    // Verificar si es un PinConstraint de esta partícula
+                    auto* pin = dynamic_cast<PinConstraint*>(c.get());
+                    return pin != nullptr && pin->getParticleId() == id;
+                }),
+            m_constraints.end()
+        );
     }
     
     double Solver::addVolumeConstraint(const std::vector<Triangle>& triangles, const std::vector<Particle>& particles, double compliance) {

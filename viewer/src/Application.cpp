@@ -245,10 +245,35 @@ void Application::processInput() {
         if (m_grabbedParticleIndex != -1) {
             m_isGrabbing = true;
             const Particle& grabbed = m_solver->getParticles()[m_grabbedParticleIndex];
+            Eigen::Vector3d particlePos = grabbed.getPosition();
+            Eigen::Vector3d rayOrigin = ray.getOrigin();
+            Eigen::Vector3d rayDir = ray.getDirection();
+            
+            m_grabDistance = (particlePos - rayOrigin).dot(rayDir);
+            
+            Logger::info("Grabbed particle: " + std::to_string(m_grabbedParticleIndex));
         }
     }
     
+    if (m_isGrabbing && leftMousePressed) {
+        int bufferWidth, bufferHeight;
+        glfwGetFramebufferSize(m_window, &bufferWidth, &bufferHeight);
+        
+        Ray ray = m_camera->screenToWorldRay(
+            static_cast<float>(m_lastX), 
+            static_cast<float>(m_lastY), 
+            bufferWidth, 
+            bufferHeight
+        );
+        
+        Eigen::Vector3d newPinPos = ray.getOrigin() + m_grabDistance * ray.getDirection().normalized();
+        m_solver->addPin(m_grabbedParticleIndex, newPinPos);
+    }
+    
     if (!leftMousePressed && m_leftMouseWasPressed) {
+        if (m_isGrabbing && m_grabbedParticleIndex != -1) 
+            m_solver->removePin(m_grabbedParticleIndex);
+        
         m_grabbedParticleIndex = -1;
         m_isGrabbing = false;
     }

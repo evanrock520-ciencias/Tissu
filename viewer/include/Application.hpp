@@ -95,6 +95,7 @@ private:
     int m_grabbedParticleIndex = -1;
     bool m_isGrabbing = false;
     bool m_leftMouseWasPressed = false;
+    double m_grabDistance = 0.0;
 };
 
 }

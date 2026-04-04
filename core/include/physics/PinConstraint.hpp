@@ -69,6 +69,8 @@ public:
      * @param newPos The new world-space anchor position.
      */
     inline void setPinPosition(const Eigen::Vector3d& newPos) { m_pinPos = newPos; }
+    
+    inline int getParticleId() const { return m_particleId; }
 
 private:
     int m_particleId;           ///< Index of the constrained particle in the solver buffer.
