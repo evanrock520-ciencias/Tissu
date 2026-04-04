@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "Camera.hpp"
+#include "physics/Particle.hpp"
 #include <cmath>
+#include <limits>
 
 namespace Tissu {
 namespace Viewer {
@@ -91,7 +93,7 @@ void Camera::handleZoom(float yoffset) {
     updateCameraVectors();
 }
 
-Eigen::Vector4d Camera::screenToWorldRay(float mouseX, float mouseY, int screenWidth, int screenHeight) {
+Ray Camera::screenToWorldRay(float mouseX, float mouseY, int screenWidth, int screenHeight) {
     double ndcX = (2.0 * mouseX) / screenWidth - 1.0;
     double ndcY = 1.0 - (2.0 * mouseY) / screenHeight;
 
@@ -106,10 +108,10 @@ Eigen::Vector4d Camera::screenToWorldRay(float mouseX, float mouseY, int screenW
     worldFar /= worldFar.w();
     
     Eigen::Vector4d rayDir = (worldFar - worldNear).normalized();
+    Ray ray(this->m_position.cast<double>(), rayDir.head(3));
     
-    return rayDir;
+    return ray;
 }
-
 
 void Camera::updateCameraVectors() {
     float yaw_rad = m_yaw * DEG_TO_RAD;

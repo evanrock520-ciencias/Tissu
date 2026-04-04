@@ -14,6 +14,7 @@
 #include "Application.hpp"
 #include "engine/Cloth.hpp"
 #include "engine/ClothMesh.hpp"
+#include "math/Types.hpp"
 #include "utils/Logger.hpp"
 #include "physics/Solver.hpp"
 #include "physics/Particle.hpp"
@@ -235,17 +236,16 @@ void Application::processInput() {
         int bufferWidth, bufferHeight;
         glfwGetFramebufferSize(m_window, &bufferWidth, &bufferHeight);
         
-        Eigen::Vector4d ray = m_camera->screenToWorldRay(
+        Ray ray = m_camera->screenToWorldRay(
             static_cast<float>(m_lastX), 
             static_cast<float>(m_lastY), 
             bufferWidth, 
             bufferHeight
         );
 
-        Logger::info("Mouse: (" + std::to_string(m_lastX) + ", " + std::to_string(m_lastY) + 
-                    ") | BufferSize: " + std::to_string(bufferWidth) + "x" + std::to_string(bufferHeight));
-        Logger::info("Ray: (" + std::to_string(ray.x()) + ", " + std::to_string(ray.y()) + 
-                    ", " + std::to_string(ray.z()) + ", " + std::to_string(ray.w()) + ")");
+        int idxClosest = findClosestParticleToRay(ray, m_solver->getParticles());
+        const Particle& closest = m_solver->getParticles()[idxClosest];
+        Logger::info("Idx of grabbed particle: " + std::to_string(idxClosest));
     }
 }
 
@@ -377,6 +377,30 @@ void Application::syncVisualTopology() {
 
     m_renderer->setIndices(triangles);
     m_renderer->updateTopology();
+}
+
+int Application::findClosestParticleToRay(const Ray& ray, const std::vector<Particle>& particles) {
+    if (particles.empty()) return -1;
+    
+    Eigen::Vector3d rayOrigin = ray.getOrigin();
+    Eigen::Vector3d rayDir = ray.getDirection();
+    
+    int closestIndex = 0;
+    double minDistance = std::numeric_limits<double>::max();
+    
+    for (size_t idx = 0; idx < particles.size(); ++idx) {
+        Eigen::Vector3d particlePos = particles[idx].getPosition();
+        Eigen::Vector3d toParticle = particlePos - rayOrigin;
+        
+        double distance = toParticle.cross(rayDir).norm();
+        
+        if (distance < minDistance) {
+            minDistance = distance;
+            closestIndex = idx;
+        }
+    }
+    
+    return closestIndex;
 }
 
 } 

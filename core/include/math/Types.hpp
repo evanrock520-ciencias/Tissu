@@ -18,6 +18,8 @@
 #pragma once
 
 #include <algorithm>
+#include "Eigen/Dense"
+
 namespace Tissu {
 
 /**
@@ -27,6 +29,18 @@ namespace Tissu {
 struct Triangle {
     int a, b, c;
     Triangle(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
+};
+
+struct Ray {
+public:
+    Ray(Eigen::Vector3d origin, Eigen::Vector3d direction) : m_direction(direction), m_origin(origin.normalized()) {}
+
+    inline const Eigen::Vector3d& getOrigin() const { return m_origin; }
+    inline const Eigen::Vector3d& getDirection() const { return m_direction; }
+
+private:
+    Eigen::Vector3d m_origin;
+    Eigen::Vector3d m_direction;
 };
 
 /**

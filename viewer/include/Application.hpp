@@ -44,6 +44,7 @@ public:
     void run();
     void shutdown();
     void syncVisualTopology();
+    int findClosestParticleToRay(const Ray& ray, const std::vector<Particle>& particles);
 
     inline void setWorld(std::shared_ptr<World> world) { m_world = world; }
     inline void setSolver(std::shared_ptr<Solver> solver) { m_solver = solver; }

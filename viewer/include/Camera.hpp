@@ -16,7 +16,13 @@
 
 #pragma once
 
+#include "math/Types.hpp"
 #include <Eigen/Dense>
+#include <vector>
+
+namespace Tissu {
+class Particle;
+}
 
 namespace Tissu {
 namespace Viewer {
@@ -32,7 +38,7 @@ public:
     void handleMouse(float xoffset, float yoffset);
     void handleZoom(float yoffset);
 
-    Eigen::Vector4d screenToWorldRay(float mouseX, float mouseY, int screenWidth, int screenHeight);
+    Ray screenToWorldRay(float mouseX, float mouseY, int screenWidth, int screenHeight);
 
     void inline setAspectRatio(float ratio) { m_aspectRatio = ratio; }
 

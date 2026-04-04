@@ -1,5 +1,22 @@
 from python.tissu import Simulation
 
+def curtain():
+    sim = Simulation(substeps=10, iterations=2, gravity=-9.81, thickness=0.005)
+    sim.wind = [3.0, 0.0, 2.0]
+    
+    sim.add_floor()
+    curtain = sim.create_grid(
+        name="curtain",
+        rows=50,
+        cols=50,
+        spacing=0.01,
+        material="silk"
+    )
+    
+    curtain.pin_top_corners()
+    sim.view()
+    
+    
 def pillow():
     sim = Simulation(substeps=40, iterations=2, gravity=-9.81, thickness=0.002)
     sim.wind = [0.0, 0.0, 0.0]
@@ -23,4 +40,6 @@ def pillow():
     sim.view()
 
 if __name__ == "__main__":
-    pillow()
+    match 0:
+        case 0 : curtain()
+        case 1 : pillow()
