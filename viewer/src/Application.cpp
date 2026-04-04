@@ -8,6 +8,7 @@
 #include <imgui_impl_opengl3.h>
 #include <memory>
 #include <Eigen/Dense>
+#include <string>
 #include <vector>
 
 #include "Application.hpp"
@@ -229,6 +230,23 @@ void Application::processInput() {
         resetSimulation();
     }
     rWasPressed = rIsPressed;
+
+    if (glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+        int bufferWidth, bufferHeight;
+        glfwGetFramebufferSize(m_window, &bufferWidth, &bufferHeight);
+        
+        Eigen::Vector4d ray = m_camera->screenToWorldRay(
+            static_cast<float>(m_lastX), 
+            static_cast<float>(m_lastY), 
+            bufferWidth, 
+            bufferHeight
+        );
+
+        Logger::info("Mouse: (" + std::to_string(m_lastX) + ", " + std::to_string(m_lastY) + 
+                    ") | BufferSize: " + std::to_string(bufferWidth) + "x" + std::to_string(bufferHeight));
+        Logger::info("Ray: (" + std::to_string(ray.x()) + ", " + std::to_string(ray.y()) + 
+                    ", " + std::to_string(ray.z()) + ", " + std::to_string(ray.w()) + ")");
+    }
 }
 
 void Application::update() {

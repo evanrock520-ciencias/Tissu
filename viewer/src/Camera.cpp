@@ -91,6 +91,26 @@ void Camera::handleZoom(float yoffset) {
     updateCameraVectors();
 }
 
+Eigen::Vector4d Camera::screenToWorldRay(float mouseX, float mouseY, int screenWidth, int screenHeight) {
+    double ndcX = (2.0 * mouseX) / screenWidth - 1.0;
+    double ndcY = 1.0 - (2.0 * mouseY) / screenHeight;
+
+    Eigen::Matrix4d invMatrix = (getProjectionMatrix().cast<double>() * getViewMatrix().cast<double>()).inverse();
+    
+    Eigen::Vector4d clipNear(ndcX, ndcY, -1.0, 1.0);
+    Eigen::Vector4d worldNear = invMatrix * clipNear;
+    worldNear /= worldNear.w();
+    
+    Eigen::Vector4d clipFar(ndcX, ndcY, 1.0, 1.0);
+    Eigen::Vector4d worldFar = invMatrix * clipFar;
+    worldFar /= worldFar.w();
+    
+    Eigen::Vector4d rayDir = (worldFar - worldNear).normalized();
+    
+    return rayDir;
+}
+
+
 void Camera::updateCameraVectors() {
     float yaw_rad = m_yaw * DEG_TO_RAD;
     float pitch_rad = m_pitch * DEG_TO_RAD;
@@ -105,5 +125,4 @@ void Camera::updateCameraVectors() {
 }
 
 }
-
 }

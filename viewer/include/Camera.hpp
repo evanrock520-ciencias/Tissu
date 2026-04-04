@@ -27,10 +27,12 @@ public:
             Eigen::Vector3f target = Eigen::Vector3f(0.0f, 5.0f, 0.0f));
 
     Eigen::Matrix4f getViewMatrix() const;
-    Eigen::Matrix4f getProjectionMatrix() const;
+    Eigen::Matrix4f getProjectionMatrix() const; 
 
     void handleMouse(float xoffset, float yoffset);
     void handleZoom(float yoffset);
+
+    Eigen::Vector4d screenToWorldRay(float mouseX, float mouseY, int screenWidth, int screenHeight);
 
     void inline setAspectRatio(float ratio) { m_aspectRatio = ratio; }
 
