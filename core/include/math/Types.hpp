@@ -33,7 +33,7 @@ struct Triangle {
 
 struct Ray {
 public:
-    Ray(Eigen::Vector3d origin, Eigen::Vector3d direction) : m_direction(direction), m_origin(origin.normalized()) {}
+    Ray(Eigen::Vector3d origin, Eigen::Vector3d direction) : m_direction(direction.normalized()), m_origin(origin) {}
 
     inline const Eigen::Vector3d& getOrigin() const { return m_origin; }
     inline const Eigen::Vector3d& getDirection() const { return m_direction; }

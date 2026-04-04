@@ -89,6 +89,8 @@ private:
 
     std::vector<Eigen::Vector3d> m_originalPositions;
     std::vector<int> m_originalIndices;
+
+    double m_maxRadius = 1.0;
 };
 
 }

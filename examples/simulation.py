@@ -1,15 +1,15 @@
 from python.tissu import Simulation
 
 def curtain():
-    sim = Simulation(substeps=10, iterations=2, gravity=-9.81, thickness=0.005)
-    sim.wind = [3.0, 0.0, 2.0]
+    sim = Simulation(substeps=15, iterations=2, gravity=-9.81, thickness=0.05)
+    sim.wind = [0.0, 0.0, 0.0]
     
-    sim.add_floor()
+    sim.add_floor(friction=0.5)
     curtain = sim.create_grid(
         name="curtain",
-        rows=50,
-        cols=50,
-        spacing=0.01,
+        rows=80,
+        cols=80,
+        spacing=0.05,
         material="silk"
     )
     

@@ -174,11 +174,7 @@ bool Application::init(int width, int height, const std::string& title, const st
         m_camera->setAspectRatio(static_cast<float>(bufferWidth) / static_cast<float>(bufferHeight));
         glViewport(0, 0, bufferWidth, bufferHeight);
     }
-    
-    Logger::info("Window Size: " + std::to_string(width) + "x" + std::to_string(height));
-    Logger::info("Framebuffer Size: " + std::to_string(bufferWidth) + "x" + std::to_string(bufferHeight));
-    
-    Logger::info("Tissu Viewer initialized successfully: OpenGL 3.3 Core Profile");
+
     return true;
 }
 
@@ -244,8 +240,10 @@ void Application::processInput() {
         );
 
         int idxClosest = findClosestParticleToRay(ray, m_solver->getParticles());
-        const Particle& closest = m_solver->getParticles()[idxClosest];
-        Logger::info("Idx of grabbed particle: " + std::to_string(idxClosest));
+        if (idxClosest != -1) {
+            const Particle& closest = m_solver->getParticles()[idxClosest];
+            Logger::info("Idx of grabbed particle: " + std::to_string(idxClosest));
+        } 
     }
 }
 
@@ -385,17 +383,25 @@ int Application::findClosestParticleToRay(const Ray& ray, const std::vector<Part
     Eigen::Vector3d rayOrigin = ray.getOrigin();
     Eigen::Vector3d rayDir = ray.getDirection();
     
-    int closestIndex = 0;
+    int closestIndex = -1;
     double minDistance = std::numeric_limits<double>::max();
     
-    for (size_t idx = 0; idx < particles.size(); ++idx) {
+    const double clickTolerance = 0.1; 
+
+    for (int idx = 0; idx < (int)particles.size(); ++idx) {
         Eigen::Vector3d particlePos = particles[idx].getPosition();
         Eigen::Vector3d toParticle = particlePos - rayOrigin;
         
-        double distance = toParticle.cross(rayDir).norm();
+        double t = toParticle.dot(rayDir);
         
-        if (distance < minDistance) {
-            minDistance = distance;
+        if (t < 0) continue;
+        double distSq = toParticle.squaredNorm() - (t * t);
+        
+        if (distSq < 0) distSq = 0;
+        double currentDistance = std::sqrt(distSq);
+
+        if (currentDistance < clickTolerance && currentDistance < minDistance) {
+            minDistance = currentDistance;
             closestIndex = idx;
         }
     }
