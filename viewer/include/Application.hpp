@@ -91,6 +91,10 @@ private:
     std::vector<int> m_originalIndices;
 
     double m_maxRadius = 1.0;
+    
+    int m_grabbedParticleIndex = -1;
+    bool m_isGrabbing = false;
+    bool m_leftMouseWasPressed = false;
 };
 
 }

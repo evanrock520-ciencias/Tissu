@@ -228,7 +228,9 @@ void Application::processInput() {
     }
     rWasPressed = rIsPressed;
 
-    if (glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+    bool leftMousePressed = (glfwGetMouseButton(m_window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS);
+
+    if (leftMousePressed && !m_leftMouseWasPressed) {
         int bufferWidth, bufferHeight;
         glfwGetFramebufferSize(m_window, &bufferWidth, &bufferHeight);
         
@@ -239,12 +241,19 @@ void Application::processInput() {
             bufferHeight
         );
 
-        int idxClosest = findClosestParticleToRay(ray, m_solver->getParticles());
-        if (idxClosest != -1) {
-            const Particle& closest = m_solver->getParticles()[idxClosest];
-            Logger::info("Idx of grabbed particle: " + std::to_string(idxClosest));
-        } 
+        m_grabbedParticleIndex = findClosestParticleToRay(ray, m_solver->getParticles());
+        if (m_grabbedParticleIndex != -1) {
+            m_isGrabbing = true;
+            const Particle& grabbed = m_solver->getParticles()[m_grabbedParticleIndex];
+        }
     }
+    
+    if (!leftMousePressed && m_leftMouseWasPressed) {
+        m_grabbedParticleIndex = -1;
+        m_isGrabbing = false;
+    }
+    
+    m_leftMouseWasPressed = leftMousePressed;
 }
 
 void Application::update() {
