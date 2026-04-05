@@ -106,6 +106,7 @@ private:
     Eigen::Vector3d m_oldPosition;  ///< Position from the previous step.
     Eigen::Vector3d m_acceleration; ///< Force accumulator converted to acceleration.
     double inverseMass;             ///< Inverse mass.
+    double m_damping = 0.99;
 };
 
 }

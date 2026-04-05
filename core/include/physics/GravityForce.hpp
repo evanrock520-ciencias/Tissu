@@ -55,6 +55,20 @@ public:
      * @param dt Current substep time delta in seconds.
      */
     void apply(std::vector<Particle>& particles, double dt) override;
+    
+    /**
+     * @brief Updates the gravitational acceleration vector at runtime.
+     *
+     * @param gravity New world-space acceleration vector in m/s².
+     */
+    inline void setGravity(const Eigen::Vector3d& gravity) { m_gravity = gravity; }
+    
+    /**
+     * @brief Gets the current gravitational acceleration vector.
+     *
+     * @return The world-space acceleration vector in m/s².
+     */
+    inline const Eigen::Vector3d& getGravity() const { return m_gravity; }
 
 private:
     Eigen::Vector3d m_gravity;      //< Constant gravitational acceleration vector in m/s².

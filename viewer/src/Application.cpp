@@ -15,6 +15,7 @@
 #include "engine/Cloth.hpp"
 #include "engine/ClothMesh.hpp"
 #include "math/Types.hpp"
+#include "physics/GravityForce.hpp"
 #include "utils/Logger.hpp"
 #include "physics/Solver.hpp"
 #include "physics/Particle.hpp"
@@ -153,6 +154,9 @@ bool Application::init(int width, int height, const std::string& title, const st
     if (!m_world) m_world = std::make_shared<World>(); 
     if (!m_solver) m_solver = std::make_shared<Solver>();
     if (!m_mesh)   m_mesh   = std::make_shared<ClothMesh>();
+
+    m_gravityForce = std::make_shared<GravityForce>(Eigen::Vector3d(0.0, -9.81, 0.0));
+    m_world->addForce(m_gravityForce);
 
     m_renderer = std::make_unique<Renderer>();
     m_renderer->setShaderPath(shaderPath);
@@ -348,7 +352,11 @@ void Application::drawUI() {
     if (ImGui::CollapsingHeader("Global Physics")) {
         static float gY = -9.81f;
         if (ImGui::SliderFloat("Gravity Y", &gY, -20.0f, 2.0f)) {
-            m_world->setGravity(Eigen::Vector3d(0, gY, 0));
+            Eigen::Vector3d gravityVector(0, gY, 0);
+            m_world->setGravity(gravityVector);
+            if (m_gravityForce) {
+                m_gravityForce->setGravity(gravityVector);
+            }
         }
 
         static int subs = m_solver->getSubsteps();

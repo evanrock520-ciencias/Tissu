@@ -29,6 +29,7 @@ namespace Tissu {
 class Solver;
 class ClothMesh;
 class World;
+class GravityForce;
 
 namespace Viewer {
 
@@ -74,6 +75,7 @@ private:
     std::shared_ptr<Cloth> m_cloth;
     std::shared_ptr<ClothMaterial> cloth_material;
     std::shared_ptr<AerodynamicForce> m_aeroForce;
+    std::shared_ptr<GravityForce> m_gravityForce;
     double m_deltaTime;
     double m_lastFrame;
 

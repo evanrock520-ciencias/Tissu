@@ -70,7 +70,9 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
     py::class_<Tissu::Force, std::shared_ptr<Tissu::Force>>(m, "Force");
 
     py::class_<Tissu::GravityForce, Tissu::Force, std::shared_ptr<Tissu::GravityForce>>(m, "GravityForce")
-        .def(py::init<const Eigen::Vector3d&>());
+        .def(py::init<const Eigen::Vector3d&>())
+        .def("set_gravity", &GravityForce::setGravity)
+        .def("get_gravity", &GravityForce::getGravity);
 
     py::class_<Tissu::AerodynamicForce, Tissu::Force, std::shared_ptr<Tissu::AerodynamicForce>>(m, "AerodynamicForce")
         .def(py::init<const std::vector<AeroFace>&, const Eigen::Vector3d&, double>());

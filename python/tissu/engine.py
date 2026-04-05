@@ -49,6 +49,8 @@ class Simulation:
     def gravity(self, value: float):
         self._gravity_vector = np.array([0.0, float(value), 0.0], dtype=np.float64)
         self.world.set_gravity(self._gravity_vector)
+        if self._gravity_force:
+            self._gravity_force.set_gravity(self._gravity_vector)
         
     @property
     def wind(self):
@@ -469,7 +471,6 @@ class Fabric:
         return self.instance.get_triangles()
     
 class Material:
-    
     _BUILTIN_PRESETS = {
         "silk":    (0.1,  1e-9,  1e-8,  0.1),
         "cotton":  (0.2,  1e-9,  1e-8,  0.01),

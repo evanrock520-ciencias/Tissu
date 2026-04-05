@@ -22,7 +22,7 @@ void Particle::integrate(double deltaTime) {
         return;
     }
 
-    Eigen::Vector3d velocity = (m_position - m_oldPosition) * 0.98;
+    Eigen::Vector3d velocity = (m_position - m_oldPosition) * m_damping;
     Eigen::Vector3d currentPos = m_position;
 
     m_position = m_position + velocity + m_acceleration * (deltaTime * deltaTime);
