@@ -38,6 +38,7 @@ public:
 
     void addPlaneCollider(const Eigen::Vector3d& origin, const Eigen::Vector3d& normal, double friction);
     void addSphereCollider(const Eigen::Vector3d& center, double radius, double friction);
+    void addCapsuleCollider(const Eigen::Vector3d start, const Eigen::Vector3d end, double radius, double friction);
 
     inline void setGravity(const Eigen::Vector3d& gravity) { m_gravity = gravity; }
     inline void setWind(const Eigen::Vector3d& wind) { m_wind = wind; }

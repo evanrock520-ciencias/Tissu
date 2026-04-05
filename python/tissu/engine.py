@@ -160,9 +160,13 @@ class Simulation:
         self.world.add_plane_collider([0.0, float(height), 0.0], [0.0, 1.0, 0.0], float(friction))
         sdk.Logger.info(f"Added collision floor at Y={height}")
 
-    def add_sphere(self, name: str, center: float, radius: float, friction: float = 0.5) -> None:
+    def add_sphere(self, name: str, center: np.array, radius: float, friction: float = 0.5) -> None:
         self.world.add_sphere_collider(center, float(radius), float(friction))
         sdk.Logger.info(f"Added sphere collider '{name}' at {center}")
+        
+    def add_capsule(self, start: np.array, end: np.array, radius: float = 1.0, friction: float = 0.5) -> None:
+        self.world.add_capsule_collider(start, end, float(radius), float(friction))
+        sdk.Logger.info(f"Added capsule collider")
     
     def step(self, dt: float = 1.0/60.0):
         self.solver.update(self.world, dt)

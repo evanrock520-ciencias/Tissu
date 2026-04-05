@@ -38,7 +38,7 @@ def pillow():
     rest_vol = pillow.enable_volume_preservation(compliance=0.0)
     
     sim.view()
-
+    
 if __name__ == "__main__":
     match 0:
         case 0 : curtain()

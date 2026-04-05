@@ -126,6 +126,7 @@ PYBIND11_MODULE(_cloth_sdk_core, m) {
         .def("clear", &World::clear)
         .def("add_plane_collider", &World::addPlaneCollider)
         .def("add_sphere_collider", &World::addSphereCollider)
+        .def("add_capsule_collider", &World::addCapsuleCollider)
         .def("set_gravity", &World::setGravity)
         .def("set_wind", &World::setWind)
         .def("set_air_density", &World::setAirDensity)
