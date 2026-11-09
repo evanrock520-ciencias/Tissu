@@ -151,7 +151,7 @@ The viewer includes an integrated ImGui control panel to manage the simulation o
 
 These dependencies must be installed on your system before building the project:
 
-- Cmake ($\ge$ 3.20)
+- CMake ($\ge$ 3.29) and Ninja (for preset builds)
 - C++ Compiler with C++17 support (GCC, Clang, or MSVC)
 - OpenMP
 
@@ -159,9 +159,10 @@ These dependencies must be installed on your system before building the project:
 
 To build and use `tissu`, you need:
 
-- Python ($\ge$ 3.12)
+- Python ($\ge$ 3.10)
 - Build Tools: setuptools $\ge$ 61.0, wheel
-- Packages: mypy, numpy, tqdm, pytest
+- Runtime packages: numpy, tqdm, matplotlib, imageio
+- Development tools: mypy, pytest, jinja2
 
 > Python dependencies are automatically handled if you install the package via `pip install .`
 
@@ -225,11 +226,19 @@ cd Tissu
 
 ### 2. Compile the SDK
 
-Build the shared library and the standalone viewer using our build script.
+Use the shared CMake presets to build the SDK. For a Linux headless Release
+build with mold and ccache installed:
 
 ```bash
-python scripts/build.py
+cmake --preset linux-release
+cmake --build --preset linux-release --parallel 2
 ```
+
+Use `macos-release` on macOS, `windows-release` from an MSVC developer shell on
+Windows, or `headless-release` for a portable build without mold or ccache.
+`viewer-release` includes the OpenGL viewer. See the
+[build guide](docs/core/build_and_development.md) for prerequisites, Python
+environment selection and all presets.
 
 ### 3. Install Tissu
 
@@ -252,10 +261,12 @@ Tissu includes a test suite for both **C++** and **Python**
 - **Python Tests:** Powered by Pytest (`tests/python/`).
 - **Benchmarks:** Powered by Google Benchmark (`benchmarks/`).
 
-To run all tests, you can use the test script:
+After building a preset and installing the Python package, run C++ and Python
+tests (substitute your chosen preset):
 
 ```bash
-python scripts/test.py
+ctest --preset linux-release
+python -m pytest tests/python
 ```
 
 ---

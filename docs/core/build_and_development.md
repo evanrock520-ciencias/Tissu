@@ -1,118 +1,188 @@
 # Build and Development
 
-By starting from the source code, these are the prerequisites to build and develop the project.
+Tissu uses CMake presets for local builds and CI. Each preset has its own build
+folder under `build/`, so Release, Debug and viewer builds can coexist.
 
 ## Prerequisites
 
-### Toolchain
+- **CMake >= 3.29** and **Ninja**.
+- **Python >= 3.10**, including development headers for native extensions.
+- A **C++17 compiler**: GCC, Clang, Apple Clang or MSVC.
+- **OpenMP**: included with GCC and MSVC; install `libomp` for Apple Clang.
+- **Git** to download CMake's third-party dependencies.
+- **ccache** for `linux-release` and `macos-release`.
+- **mold** for `linux-release` (Linux only).
 
-- **CMake** >= 3.20
-- **Python** >= 3.12
-- **C++ Compiler**:
-    - **Linux**: GCC >= 9 or Clang >= 10
-    - **macOS**: Apple Clang >= 12
-    - **Windows**: MSVC >= 2019
+The portable `headless-release` preset uses the system linker and does not
+require ccache. CI uses CMake 4.3.0, Ninja 1.13.2 and Python 3.12.
 
-### Linux (Ubuntu/Debian)
+### Ubuntu/Debian
 
 ```bash
-sudo apt update
-sudo apt install -y build-essential cmake python3 python3-pip git
+sudo apt-get update
+sudo apt-get install -y build-essential cmake ninja-build python3-dev python3-venv git ccache mold
 ```
 
-### Linux (Fedora)
+Check `cmake --version`: if your distribution provides an older version, install
+CMake >= 3.29 before configuring.
+
+### Fedora
 
 ```bash
-sudo dnf install -y gcc gcc-c++ make cmake python3 python3-pip git
+sudo dnf install -y gcc gcc-c++ cmake ninja-build python3-devel python3-pip git ccache mold
 ```
 
 ### macOS
 
 ```bash
 xcode-select --install
-brew install cmake python git libomp
+brew install cmake ninja python git libomp ccache
 ```
 
 ### Windows
 
-```powershell
-# Install Visual Studio 2019 or later with C++ development tools
-# Install Cmake, Python and Git from their official websites or using scoop or chocolatey
-# scoop install cmake python git
-# choco install cmake python git
-```
+Install Visual Studio 2022 with the **Desktop development with C++** workload,
+CMake, Ninja, Python and Git. Run the commands below from an **x64 Native Tools
+Command Prompt** or Developer PowerShell so Ninja can find `cl.exe` and the
+Windows SDK. CI configures this environment with `ilammy/msvc-dev-cmd`.
 
-## Building the Project
-
-The first step is to clone the repository:
+## Build with presets
 
 ```bash
 git clone https://github.com/evanrock520-ciencias/Tissu.git
 cd Tissu
+python -m venv .venv
 ```
 
-To build the project, I recommend using the build script.
+Activate the environment (`source .venv/bin/activate` on Linux/macOS,
+`.venv\Scripts\Activate.ps1` in PowerShell), then install the development tools:
 
 ```bash
-python scripts/build.py 
+python -m pip install --upgrade pip
+python -m pip install mypy pytest jinja2
+cmake --list-presets
 ```
 
-### Build Script Flags (`build.py`)
+Choose the preset for your platform:
 
-- `--no-compile`: Skips the compilation step.
-- `--no-build`: Skips the entire build phase.
-- `--no-viewer`: Disables the viewer.
+| Preset | Configuration | Compiler cache | Linker |
+| --- | --- | --- | --- |
+| `linux-release` | Release, headless | ccache | mold |
+| `macos-release` | Release, headless | ccache | Apple default |
+| `windows-release` | Release, headless, MSVC | None | MSVC default |
+| `headless-release` | Release, headless, portable | None | System default |
+| `viewer-release` | Release with OpenGL viewer | None | System default |
+| `debug` | Debug, headless | None | System default |
+| `benchmarks` | Release, benchmarks only, no tests | None | System default |
 
-Alternatively, you can use CMake directly:
+For example, on Linux:
 
 ```bash
-cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
+cmake --preset linux-release -DPython_EXECUTABLE="$(python -c 'import sys; print(sys.executable)')"
+cmake --build --preset linux-release --parallel 2
+python -m pip install -e '.[dev]'
+ctest --preset linux-release
+python -m pytest tests/python
 ```
 
-Then, if you want to install the Python package, run from the root of the repository:
+On macOS, substitute `macos-release`. In PowerShell use:
+
+```powershell
+cmake --preset windows-release "-DPython_EXECUTABLE=$((Get-Command python).Source)"
+cmake --build --preset windows-release --parallel 2
+python -m pip install -e '.[dev]'
+ctest --preset windows-release
+python -m pytest tests/python
+```
+
+Selecting the interpreter explicitly ensures that CMake builds the extension
+for the same Python environment that runs the tests. The build copies the
+extension into `python/tissu/` and `blender/libs/`; build one Python ABI at a time
+in a checkout.
+
+### Optional components
+
+Presets disable Tracy, benchmarks and examples unless explicitly requested.
+Override cache variables when configuring:
 
 ```bash
-pip install -e .
+cmake --preset linux-release -DTISSU_BUILD_EXAMPLES=ON -DTISSU_BUILD_BENCHMARKS=ON
+cmake --build --preset linux-release --parallel 2
 ```
 
-> [!NOTE]
-> To see more about the python API, check the [Python API documentation](../python/index.md).
+Available switches:
 
-## Running Tests
+- `BUILD_TESTING`: build and register Tissu's C++ tests.
+- `TISSU_BUILD_BENCHMARKS`: download Google Benchmark and build `tissu_benchmarks`.
+- `TISSU_BUILD_EXAMPLES`: build the C++ examples.
+- `TISSU_BUILD_VIEWER`: download and build the OpenGL viewer dependencies.
+- `TISSU_ENABLE_TRACY`: enable profiling instrumentation.
+- `TISSU_USE_CCACHE`: require ccache and use it as the compiler launcher.
+- `CMAKE_LINKER_TYPE`: select a linker, e.g. `MOLD` on Linux or `DEFAULT`.
 
-Tissu includes a comprehensive test suite for both C++ and Python. They're powered by Google Test and Pytest,
-respectively.
-I recommend using the provided Python utility script to run the tests.
+Viewer builds also require OpenGL development libraries and GLFW's platform
+dependencies. On Ubuntu install these before using `viewer-release`:
 
 ```bash
-python scripts/test.py 
+sudo apt-get install -y libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
 ```
 
-### Tests Script Flags (`test.py`)
+Use an ignored `CMakeUserPresets.json` for personal compiler paths and local
+presets. Do not edit the shared presets to accommodate a single workstation.
 
-- `--no-test`: Skips the unit tests.
-- `--no-integration`: Skips the integration tests.
-- `--no-api-test`: Skips the API tests.
-- `--bench`: Runs the benchmarks.
-
-If you prefer to run the tests manually, you can use CTest for C++ tests and Pytest for Python tests.
+### Benchmarks
 
 ```bash
-ctest --test-dir build/tests --output-on-failure
+cmake --preset benchmarks
+cmake --build --preset benchmarks --parallel 2
+./build/benchmarks/bin/tissu_benchmarks --benchmark_out=build/benchmarks/results.json --benchmark_out_format=json
 ```
 
-````bash
-pytest -v tests/python
-````
+On Windows the executable has the `.exe` suffix. For Linux compiler caching and
+mold, append `-DTISSU_USE_CCACHE=ON -DCMAKE_LINKER_TYPE=MOLD` when configuring.
+The manual **Benchmarks** workflow uploads JSON results; it does not generate
+plots or enforce performance thresholds.
 
-### Code Style
+## Tests and CI
 
-To maintain code consistency, Tissu incorporates code style checks using `clang-format` for C++ and `ruff` for Python.
-To check the code style, before committing your changes, run the following commands:
+The **CI** workflow runs actionlint, Ruff and clang-format once, builds and tests Release on
+Linux, macOS and Windows, and checks that the benchmarks compile on Linux.
+`astral-sh/setup-uv` installs uv 0.13.7, selects Python 3.12 and activates a
+`.venv` shared by dependency installation, CMake and the Python tests. The action
+persists uv's download cache using `pyproject.toml` and the build configuration
+as cache inputs. Dependencies are installed with `uv pip install '.[dev]'`;
+tests run with `uv run --no-project python -m pytest tests/python` in that
+environment. The release workflow also uses uv, with its Python version matrix.
+
+`lukka/get-cmake` installs CMake and Ninja, `threeal/cmake-action` configures and
+builds using the shared presets, and CTest executes the corresponding test
+preset. `rui314/setup-mold` installs mold on Linux with `make-default: false`;
+the Linux preset explicitly selects it through `CMAKE_LINKER_TYPE=MOLD`.
+`hendrikmuhs/ccache-action` installs and persists ccache on Unix.
+Compiler caches are separated by configuration, operating system, architecture
+and Python version. Generated FetchContent build trees are not restored across
+runners.
+
+CTest presets run sequentially because some tests share temporary file names.
+They set `OMP_NUM_THREADS=2` to limit OpenMP overhead and fail when no tests are
+registered. CI uploads C++ and Python test reports and cancels superseded runs.
+Actions use explicit version tags or commit SHAs; Dependabot proposes grouped
+weekly updates.
+
+### Code style
 
 ```bash
-pip install ruff pre-commit
-pre-commit install
-pre-commit run --all-files
+python -m pip install prek
+prek run --all-files
 ```
+
+The hook versions are defined in `.pre-commit-config.yaml` and used by the
+`j178/prek-action` CI job.
+
+### Legacy helper scripts
+
+`scripts/build.py` and `scripts/test.py` remain available for existing workflows
+that use the `build/` directory directly. They do not select preset build
+folders; use `cmake --build --preset ...` and `ctest --preset ...` with presets.
+`build.py --no-compile` skips CMake configuration, while `--no-build` skips the
+build step.
