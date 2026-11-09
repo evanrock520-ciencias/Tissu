@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["scikit-build-core>=0.11,<2", "pybind11==3.1.0", "jinja2>=3.1"]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "pytissu"
@@ -8,7 +8,8 @@ version = "1.1.0"
 description = "A cloth simulation SDK for Python"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Evan Miranda" }]
 keywords = ["cloth", "simulation", "physics", "3d"]
 
@@ -43,14 +44,37 @@ Homepage = "https://github.com/evanrock520-ciencias/Tissu"
 Repository = "https://github.com/evanrock520-ciencias/Tissu.git"
 Issues = "https://github.com/evanrock520-ciencias/Tissu/issues"
 
-[tool.setuptools.packages.find]
-where = ["python"]
+[tool.scikit-build]
+minimum-version = "0.11"
+cmake.version = ">=3.29"
+cmake.args = ["--preset", "package"]
+build.targets = ["_cloth_sdk_core"]
+install.components = ["python"]
+# Source exclusions keep local binaries out; CMake installs the new extension.
+wheel.packages = ["python/tissu"]
+sdist.exclude = [
+    ".github", ".agents", ".aws", ".codex", ".venv", "build", "dist",
+    "data", "docs/assets", "examples/jupyter", "benchmarks/storage",
+    "**/*.so", "**/*.pyd", "**/*.dll", "**/*.dylib", "**/__pycache__",
+    "**/*.egg-info", "CMakeUserPresets.json",
+]
 
-[tool.setuptools]
-zip-safe = false
+[tool.cibuildwheel]
+build = "cp{310,311,312,313,314}-*"
+skip = "*-musllinux_*"
+archs = ["native"]
+build-frontend = "build[uv]"
+environment = { CMAKE_BUILD_PARALLEL_LEVEL = "2", OMP_NUM_THREADS = "2", MPLBACKEND = "Agg" }
+test-requires = ["pytest"]
+test-sources = ["tests/python"]
+test-command = "python -m pytest tests/python -q"
 
-[tool.setuptools.package-data]
-tissu = ["*.so", "*.pyd", "*.pyi", "shaders/*.vert", "shaders/*.frag"]
+[tool.cibuildwheel.linux]
+manylinux-x86_64-image = "manylinux_2_28"
+before-all = "dnf install -y git"
+
+[tool.cibuildwheel.macos]
+before-all = "brew install libomp"
 
 [tool.ruff]
 line-length = 120
