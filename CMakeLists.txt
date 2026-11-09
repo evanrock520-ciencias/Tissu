@@ -66,6 +66,8 @@ FetchContent_Declare(
         eigen
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
         GIT_TAG 3.4.0
+        # Populate headers without configuring Eigen's BLAS/LAPACK projects.
+        SOURCE_SUBDIR tissu-headers-only
 )
 
 FetchContent_Declare(
@@ -100,8 +102,6 @@ FetchContent_Declare(
 )
 
 set(TINYOBJLOADER_INSTALL OFF CACHE BOOL "" FORCE)
-set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "" FORCE)
-set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -129,12 +129,19 @@ else ()
 endif ()
 
 
-# BUILD_TESTING also controls Eigen's own suite; only enable Tissu's tests.
+# Keep third-party tests separate from Tissu's own suite.
 set(_tissu_build_testing "${BUILD_TESTING}")
 set(BUILD_TESTING OFF)
 FetchContent_MakeAvailable(eigen tinyobjloader json pybind11 imath alembic tracy)
 set(BUILD_TESTING "${_tissu_build_testing}")
 unset(_tissu_build_testing)
+
+# Tissu uses Eigen as a header-only dependency. Eigen 3.4 unconditionally
+# configures BLAS/LAPACK, which can mix MinGW Fortran with MSVC on Windows.
+add_library(tissu_eigen INTERFACE)
+add_library(Eigen3::Eigen ALIAS tissu_eigen)
+target_include_directories(tissu_eigen SYSTEM INTERFACE "${eigen_SOURCE_DIR}")
+
 if (BUILD_TESTING)
     FetchContent_MakeAvailable(googletest)
 endif ()
