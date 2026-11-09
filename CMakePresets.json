@@ -174,5 +174,129 @@
       "inherits": "test-base",
       "configurePreset": "debug"
     }
+  ],
+  "workflowPresets": [
+    {
+      "name": "headless-release",
+      "displayName": "Configure, build and test headless-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "headless-release"
+        },
+        {
+          "type": "build",
+          "name": "headless-release"
+        },
+        {
+          "type": "test",
+          "name": "headless-release"
+        }
+      ]
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Configure, build and test linux-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-release"
+        },
+        {
+          "type": "build",
+          "name": "linux-release"
+        },
+        {
+          "type": "test",
+          "name": "linux-release"
+        }
+      ]
+    },
+    {
+      "name": "macos-release",
+      "displayName": "Configure, build and test macos-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "macos-release"
+        },
+        {
+          "type": "build",
+          "name": "macos-release"
+        },
+        {
+          "type": "test",
+          "name": "macos-release"
+        }
+      ]
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Configure, build and test windows-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "windows-release"
+        },
+        {
+          "type": "build",
+          "name": "windows-release"
+        },
+        {
+          "type": "test",
+          "name": "windows-release"
+        }
+      ]
+    },
+    {
+      "name": "viewer-release",
+      "displayName": "Configure, build and test viewer-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "viewer-release"
+        },
+        {
+          "type": "build",
+          "name": "viewer-release"
+        },
+        {
+          "type": "test",
+          "name": "viewer-release"
+        }
+      ]
+    },
+    {
+      "name": "debug",
+      "displayName": "Configure, build and test debug",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        },
+        {
+          "type": "test",
+          "name": "debug"
+        }
+      ]
+    },
+    {
+      "name": "benchmarks",
+      "displayName": "Configure and build benchmarks",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "benchmarks"
+        },
+        {
+          "type": "build",
+          "name": "benchmarks"
+        }
+      ]
+    }
   ]
 }
