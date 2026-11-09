@@ -36,7 +36,7 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["mypy", "pytest"]
+dev = ["mypy", "pytest", "jinja2"]
 
 [project.urls]
 Homepage = "https://github.com/evanrock520-ciencias/Tissu"
