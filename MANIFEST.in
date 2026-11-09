@@ -1,7 +1,12 @@
 include LICENSE
 include README.md
 include CMakeLists.txt
-recursive-include core *.cpp *.h *.hpp *.cmake
+include CMakePresets.json
+recursive-include core *.cpp *.h *.hpp *.cmake CMakeLists.txt
+recursive-include scripts *.py
+recursive-include viewer *.cpp *.hpp *.vert *.frag CMakeLists.txt
+recursive-include examples/cpp *.cpp *.hpp CMakeLists.txt
+include examples/CMakeLists.txt
 recursive-include python/src *.cpp *.h
 recursive-include tests *.cpp *.h CMakeLists.txt
 recursive-include benchmarks *.cpp *.h CMakeLists.txt
