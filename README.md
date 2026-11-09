@@ -160,7 +160,7 @@ These dependencies must be installed on your system before building the project:
 To build and use `tissu`, you need:
 
 - Python ($\ge$ 3.10)
-- Build Tools: setuptools $\ge$ 61.0, wheel
+- Build backend: scikit-build-core (installed automatically when building the package)
 - Runtime packages: numpy, tqdm, matplotlib, imageio
 - Development tools: mypy, pytest, jinja2
 
@@ -173,7 +173,7 @@ These dependencies are automatically downloaded and built by CMake via `FetchCon
 - [Eigen](https://gitlab.com/libeigen/eigen) (3.4.0)
 - [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader)
 - [nlohmann/json](https://github.com/nlohmann/json) (v3.11.3)
-- [pybind11](https://github.com/pybind/pybind11) (v2.13.6)
+- [pybind11](https://github.com/pybind/pybind11) (v3.1.0)
 - [Alembic](https://github.com/alembic/alembic) (1.8.11)
 - [Imath](https://github.com/AcademySoftwareFoundation/Imath)
 - [GoogleTest](https://github.com/google/googletest) (v1.15.2) - *For testing*
@@ -224,7 +224,20 @@ git clone https://github.com/evanrock520-ciencias/Tissu.git
 cd Tissu
 ```
 
-### 2. Compile the SDK
+### 2. Install from Source
+
+The Python build backend compiles the native extension automatically using the
+headless `package` preset:
+
+```bash
+pip install .
+```
+
+For an editable Python development installation, use `pip install -e '.[dev]'`.
+To include the OpenGL viewer, install its system prerequisites and run
+`pip install . -Ccmake.define.TISSU_BUILD_VIEWER=ON`.
+
+### 3. Build the Native SDK (Optional)
 
 Use the shared CMake presets to build the SDK. For a Linux headless Release
 build with mold and ccache installed:
@@ -242,17 +255,6 @@ Windows, or `headless-release` for a portable build without mold or ccache.
 `viewer-release` includes the OpenGL viewer. See the
 [build guide](docs/core/build_and_development.md) for prerequisites, Python
 environment selection and all presets.
-
-### 3. Install Tissu
-
-To import the library in your scripts, install the tissu package with pip:
-
-```bash
-pip install .
-```
-
-> [!NOTE]
-> Run this from the root of the repo after building with CMake
 
 ---
 

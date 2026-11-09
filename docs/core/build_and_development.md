@@ -59,7 +59,7 @@ Activate the environment (`source .venv/bin/activate` on Linux/macOS,
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install mypy pytest jinja2
+uv pip install -r pyproject.toml --extra dev
 cmake --list-presets
 ```
 
@@ -74,13 +74,13 @@ Choose the preset for your platform:
 | `viewer-release` | Release with OpenGL viewer | None | System default |
 | `debug` | Debug, headless | None | System default |
 | `benchmarks` | Release, benchmarks only, no tests | None | System default |
+| `package` | Headless Python packaging, no tests or source-tree copies | None | System default |
 
 For example, on Linux:
 
 ```bash
 cmake --preset linux-release -DPython_EXECUTABLE="$(python -c 'import sys; print(sys.executable)')"
 cmake --build --preset linux-release --parallel 2
-python -m pip install -e '.[dev]'
 ctest --preset linux-release
 python -m pytest tests/python
 ```
@@ -90,7 +90,6 @@ On macOS, substitute `macos-release`. In PowerShell use:
 ```powershell
 cmake --preset windows-release "-DPython_EXECUTABLE=$((Get-Command python).Source)"
 cmake --build --preset windows-release --parallel 2
-python -m pip install -e '.[dev]'
 ctest --preset windows-release
 python -m pytest tests/python
 ```
@@ -99,6 +98,12 @@ Selecting the interpreter explicitly ensures that CMake builds the extension
 for the same Python environment that runs the tests. The build copies the
 extension into `python/tissu/` and `blender/libs/`; build one Python ABI at a time
 in a checkout.
+
+For Python package development, `uv pip install -e '.[dev]'` compiles and
+installs the extension automatically with scikit-build-core. `uv pip install .`
+does the same for a regular installation. These commands use the `package`
+preset, whose build artifacts stay outside the source tree. To build the
+package with the viewer, add `-Ccmake.define.TISSU_BUILD_VIEWER=ON`.
 
 ### Optional components
 
@@ -118,6 +123,8 @@ Available switches:
 - `TISSU_BUILD_VIEWER`: download and build the OpenGL viewer dependencies.
 - `TISSU_ENABLE_TRACY`: enable profiling instrumentation.
 - `TISSU_USE_CCACHE`: require ccache and use it as the compiler launcher.
+- `TISSU_COPY_PYTHON_ARTIFACTS`: copy compiled modules and generated stubs into
+  the checkout for native development; disabled by the `package` preset.
 - `CMAKE_LINKER_TYPE`: select a linker, e.g. `MOLD` on Linux or `DEFAULT`.
 
 Viewer builds also require OpenGL development libraries and GLFW's platform
@@ -178,9 +185,10 @@ checks that the benchmarks compile on Linux.
 `astral-sh/setup-uv` installs uv 0.13.7, selects Python 3.12 and activates a
 `.venv` shared by dependency installation, CMake and the Python tests. The action
 persists uv's download cache using `pyproject.toml` and the build configuration
-as cache inputs. Dependencies are installed with `uv pip install '.[dev]'`;
+as cache inputs. Dependencies are installed with
+`uv pip install -r pyproject.toml --extra dev`, leaving the native build to CMake;
 tests run with `uv run --no-project python -m pytest tests/python` in that
-environment. The release workflow also uses uv, with its Python version matrix.
+environment.
 
 `lukka/get-cmake` installs CMake and Ninja, `threeal/cmake-action` configures and
 builds using the shared presets, and CTest executes the corresponding test
@@ -209,20 +217,36 @@ The hook versions are defined in `.pre-commit-config.yaml` and used by the
 
 ### Releases
 
-The release workflow reuses the native CI setup and platform presets for each
-Python version, with `BUILD_TESTING=OFF` for packaging. It builds the extension
-before creating wheels, repairs native dependencies, and installs each repaired
-wheel in an isolated uv environment to run a small simulation. The source
-distribution is built and uploaded once on Linux with Python 3.12.
+The release workflow builds one source distribution with `uv build --sdist`,
+then passes that archive to `pypa/cibuildwheel` on Linux, Windows and macOS.
+Python versions and platform settings live in `[tool.cibuildwheel]` in
+`pyproject.toml`: CPython 3.10–3.14, Linux x86_64 (`manylinux_2_28`), Windows
+AMD64 and macOS ARM64. cibuildwheel manages the Python builds, wheel tags,
+dependency repair and isolated test environments through its `build[uv]`
+frontend.
 
-Manual dispatch builds and checks distributions without publishing them. A
-published GitHub release triggers the existing PyPI publishing job.
+The `scikit-build-core` backend configures the `package` preset, compiles and
+installs the extension using CMake's `python` install component, and includes
+the Python sources, stubs and shaders. Both a checkout and the source archive can build a
+wheel without a separate native build step. `setup.py` and `MANIFEST.in` are
+replaced by the backend configuration in `pyproject.toml`.
+
+For each repaired wheel, cibuildwheel copies only `tests/python` into its test
+directory and runs the full Python suite against the installed package.
+Dependencies are repaired with auditwheel, delvewheel or delocate as appropriate
+for each platform. A release tag must match the Python package version, with an
+optional leading `v`.
+
+Manual dispatch builds and tests distributions without publishing them. A
+published GitHub release publishes the tested archives through the PyPI action
+using the existing `PYPI_API_TOKEN`. Publishing waits for all wheel jobs to pass;
+only that job requests an OIDC token permission.
 
 ### Docker
 
 The Dockerfile uses Python 3.12 on Debian Bookworm, uv 0.13.7 and CMake 4.3.0.
-It configures `headless-release` with `BUILD_TESTING=OFF`, builds the native
-extension, and installs the Python package using uv. Host binaries and local
+It installs the Python package with uv; scikit-build-core invokes the `package`
+preset and compiles the native extension automatically. Host binaries and local
 user presets are excluded from the Docker context.
 
 ```bash
