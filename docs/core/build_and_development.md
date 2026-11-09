@@ -130,6 +130,31 @@ sudo apt-get install -y libgl1-mesa-dev libxrandr-dev libxinerama-dev libxcursor
 Use an ignored `CMakeUserPresets.json` for personal compiler paths and local
 presets. Do not edit the shared presets to accommodate a single workstation.
 
+### Configure, build and test with one command
+
+Each development preset has a matching workflow preset:
+
+```bash
+cmake --workflow --preset linux-release
+```
+
+This runs CMake configuration, compilation and the C++ tests in sequence.
+Choose `macos-release` or `windows-release` on those platforms. Activate your
+Python environment before the first configuration. To select an interpreter
+explicitly, configure once with `-DPython_EXECUTABLE=...` as shown above; the
+workflow reuses that selection in the preset's build directory.
+
+Run the Python tests separately in the same environment:
+
+```bash
+uv run --no-project python -m pytest tests/python
+```
+
+Set `CMAKE_BUILD_PARALLEL_LEVEL` to limit compilation concurrency, e.g.
+`CMAKE_BUILD_PARALLEL_LEVEL=2 cmake --workflow --preset linux-release` on Unix.
+The `benchmarks` workflow preset configures and builds its executable without
+running tests or benchmarks automatically.
+
 ### Benchmarks
 
 ```bash
@@ -145,8 +170,11 @@ plots or enforce performance thresholds.
 
 ## Tests and CI
 
-The **CI** workflow runs actionlint, Ruff and clang-format once, builds and tests Release on
-Linux, macOS and Windows, and checks that the benchmarks compile on Linux.
+The **CI** workflow runs on pushes to `main`, pull requests targeting `main`,
+and manual dispatch. Feature-branch pushes are checked through their pull
+request, so an update to a PR runs CI once. CI runs actionlint, Ruff and
+clang-format once, builds and tests Release on Linux, macOS and Windows, and
+checks that the benchmarks compile on Linux.
 `astral-sh/setup-uv` installs uv 0.13.7, selects Python 3.12 and activates a
 `.venv` shared by dependency installation, CMake and the Python tests. The action
 persists uv's download cache using `pyproject.toml` and the build configuration
@@ -179,10 +207,29 @@ prek run --all-files
 The hook versions are defined in `.pre-commit-config.yaml` and used by the
 `j178/prek-action` CI job.
 
-### Legacy helper scripts
+### Releases
 
-`scripts/build.py` and `scripts/test.py` remain available for existing workflows
-that use the `build/` directory directly. They do not select preset build
-folders; use `cmake --build --preset ...` and `ctest --preset ...` with presets.
-`build.py --no-compile` skips CMake configuration, while `--no-build` skips the
-build step.
+The release workflow reuses the native CI setup and platform presets for each
+Python version, with `BUILD_TESTING=OFF` for packaging. It builds the extension
+before creating wheels, repairs native dependencies, and installs each repaired
+wheel in an isolated uv environment to run a small simulation. The source
+distribution is built and uploaded once on Linux with Python 3.12.
+
+Manual dispatch builds and checks distributions without publishing them. A
+published GitHub release triggers the existing PyPI publishing job.
+
+### Docker
+
+The Dockerfile uses Python 3.12 on Debian Bookworm, uv 0.13.7 and CMake 4.3.0.
+It configures `headless-release` with `BUILD_TESTING=OFF`, builds the native
+extension, and installs the Python package using uv. Host binaries and local
+user presets are excluded from the Docker context.
+
+```bash
+docker build -t tissu:local .
+docker run --rm tissu:local python -c "from tissu import Simulation; print(Simulation())"
+```
+
+Build and test orchestration is provided by CMake presets, CTest and pytest;
+the former Python build/test helper scripts have been removed.
+`scripts/patch_alembic.py` remains a required dependency patch used by CMake.

@@ -234,6 +234,9 @@ cmake --preset linux-release
 cmake --build --preset linux-release --parallel 2
 ```
 
+To configure, build and run the C++ tests together, use
+`cmake --workflow --preset linux-release`.
+
 Use `macos-release` on macOS, `windows-release` from an MSVC developer shell on
 Windows, or `headless-release` for a portable build without mold or ccache.
 `viewer-release` includes the OpenGL viewer. See the
