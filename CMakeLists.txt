@@ -32,6 +32,7 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum policy version for de
 option(TISSU_BUILD_BENCHMARKS "Build the solver benchmarks" ON)
 option(TISSU_BUILD_EXAMPLES "Build the C++ examples" ON)
 option(TISSU_USE_CCACHE "Cache C and C++ compilation with ccache" OFF)
+option(TISSU_COPY_PYTHON_ARTIFACTS "Copy native artifacts into the checkout for development" ON)
 
 if (TISSU_USE_CCACHE)
     find_program(CCACHE_EXECUTABLE ccache REQUIRED)
@@ -85,7 +86,8 @@ FetchContent_Declare(
 FetchContent_Declare(
         pybind11
         GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG v2.13.6
+        GIT_TAG v3.1.0
+        FIND_PACKAGE_ARGS 3.1 CONFIG
 )
 
 FetchContent_Declare(
@@ -210,7 +212,7 @@ if (TISSU_BUILD_VIEWER)
     add_subdirectory(viewer)
 endif ()
 
-# Python bindings library 
+# Python bindings library
 if (TISSU_BUILD_VIEWER)
     pybind11_add_module(_cloth_sdk_core python/src/bindings.cpp)
     target_link_libraries(_cloth_sdk_core PRIVATE TissuCore ViewerCore)
@@ -225,56 +227,62 @@ set_target_properties(_cloth_sdk_core PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-# Python stubs
-find_program(STUBGEN_EXECUTABLE stubgen)
+if (TISSU_COPY_PYTHON_ARTIFACTS)
+    # Python stubs
+    find_program(STUBGEN_EXECUTABLE stubgen)
 
-if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
-    set(STUB_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_cloth_sdk_core.pyi)
+    if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
+        set(STUB_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_cloth_sdk_core.pyi)
 
+        add_custom_command(
+                OUTPUT ${STUB_OUTPUT}
+                COMMAND ${CMAKE_COMMAND} -E rm -f ${STUB_OUTPUT}
+                COMMAND ${CMAKE_COMMAND} -E env
+                "PYTHONPATH=$<TARGET_FILE_DIR:_cloth_sdk_core>"
+                ${STUBGEN_EXECUTABLE}
+                -m _cloth_sdk_core
+                --output ${CMAKE_CURRENT_BINARY_DIR}
+                DEPENDS _cloth_sdk_core
+                WORKING_DIRECTORY $<TARGET_FILE_DIR:_cloth_sdk_core>
+                COMMENT "Generating Python stubs for _cloth_sdk_core"
+        )
+
+        add_custom_target(_cloth_sdk_core_stubs ALL DEPENDS ${STUB_OUTPUT})
+    endif ()
+
+    # Moving library
     add_custom_command(
-            OUTPUT ${STUB_OUTPUT}
-            COMMAND ${CMAKE_COMMAND} -E rm -f ${STUB_OUTPUT}
-            COMMAND ${CMAKE_COMMAND} -E env
-            "PYTHONPATH=$<TARGET_FILE_DIR:_cloth_sdk_core>"
-            ${STUBGEN_EXECUTABLE}
-            -m _cloth_sdk_core
-            --output ${CMAKE_CURRENT_BINARY_DIR}
-            DEPENDS _cloth_sdk_core
-            WORKING_DIRECTORY $<TARGET_FILE_DIR:_cloth_sdk_core>
-            COMMENT "Generating Python stubs for _cloth_sdk_core"
-    )
-
-    add_custom_target(_cloth_sdk_core_stubs ALL DEPENDS ${STUB_OUTPUT})
-endif ()
-
-# Moving library
-add_custom_command(
-        TARGET _cloth_sdk_core POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:_cloth_sdk_core>
-        ${CMAKE_SOURCE_DIR}/python/tissu/$<TARGET_FILE_NAME:_cloth_sdk_core>
-        COMMENT "Copying _cloth_sdk_core to python/tissu/"
-)
-
-add_custom_command(
-        TARGET _cloth_sdk_core POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:_cloth_sdk_core>
-        ${CMAKE_SOURCE_DIR}/blender/libs/$<TARGET_FILE_NAME:_cloth_sdk_core>
-        COMMENT "Copying _cloth_sdk_core to blender/libs/"
-)
-
-# Moving stubs 
-if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
-    add_custom_command(
-            TARGET _cloth_sdk_core_stubs POST_BUILD
+            TARGET _cloth_sdk_core POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
-            ${STUB_OUTPUT}
-            ${CMAKE_SOURCE_DIR}/python/tissu/_cloth_sdk_core.pyi
-            COMMENT "Copying stubs to python/tissu/"
+            $<TARGET_FILE:_cloth_sdk_core>
+            ${CMAKE_SOURCE_DIR}/python/tissu/$<TARGET_FILE_NAME:_cloth_sdk_core>
+            COMMENT "Copying _cloth_sdk_core to python/tissu/"
     )
+
+    add_custom_command(
+            TARGET _cloth_sdk_core POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:_cloth_sdk_core>
+            ${CMAKE_SOURCE_DIR}/blender/libs/$<TARGET_FILE_NAME:_cloth_sdk_core>
+            COMMENT "Copying _cloth_sdk_core to blender/libs/"
+    )
+
+    # Moving stubs
+    if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
+        add_custom_command(
+                TARGET _cloth_sdk_core_stubs POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy
+                ${STUB_OUTPUT}
+                ${CMAKE_SOURCE_DIR}/python/tissu/_cloth_sdk_core.pyi
+                COMMENT "Copying stubs to python/tissu/"
+        )
+    endif ()
 endif ()
 
+# Only this component is installed into Python wheels by scikit-build-core.
+install(TARGETS _cloth_sdk_core
+        LIBRARY DESTINATION tissu COMPONENT python
+        RUNTIME DESTINATION tissu COMPONENT python)
 if (BUILD_TESTING)
     add_subdirectory(tests)
 endif ()

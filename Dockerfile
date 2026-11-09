@@ -10,14 +10,11 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /workspace
 
-RUN uv pip install --system --no-cache cmake==4.3.0 jinja2
+RUN uv pip install --system --no-cache cmake==4.3.0
 
 COPY . .
 
 ENV CMAKE_BUILD_PARALLEL_LEVEL=4
-
-RUN cmake --preset headless-release -DBUILD_TESTING=OFF \
-    && cmake --build --preset headless-release
 
 RUN uv pip install --system --no-cache .
 

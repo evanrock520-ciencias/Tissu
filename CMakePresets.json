@@ -94,6 +94,15 @@
         "BUILD_TESTING": false,
         "TISSU_BUILD_BENCHMARKS": true
       }
+    },
+    {
+      "name": "package",
+      "displayName": "Headless Python package build",
+      "inherits": "headless-release",
+      "cacheVariables": {
+        "BUILD_TESTING": false,
+        "TISSU_COPY_PYTHON_ARTIFACTS": false
+      }
     }
   ],
   "buildPresets": [
