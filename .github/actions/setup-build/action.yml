@@ -1,0 +1,64 @@
+name: Set up the native build
+description: Install Python, CMake, Ninja and platform dependencies; restore the compiler cache.
+
+inputs:
+  python-version:
+    description: Python version used by pybind11 and the Python tests.
+    default: '3.12'
+  cache-key:
+    description: Separate compiler caches for different build configurations.
+    required: true
+
+outputs:
+  python-path:
+    description: Absolute path to the selected Python interpreter.
+    value: ${{ steps.interpreter.outputs.python-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up uv and Python
+      uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+      with:
+        version: '0.13.7'
+        python-version: ${{ inputs.python-version }}
+        activate-environment: true
+        enable-cache: true
+        cache-dependency-glob: pyproject.toml
+        cache-suffix: ${{ inputs.cache-key }}-py${{ inputs.python-version }}
+
+    - name: Export Python path for CMake
+      id: interpreter
+      shell: bash
+      run: |
+        python -c "import sys; from pathlib import Path; print('python-path=' + Path(sys.executable).as_posix())" >> "$GITHUB_OUTPUT"
+
+    - name: Set up CMake and Ninja
+      uses: lukka/get-cmake@f86dd60acae0d132056913e248bdabf0e0580b7a # v4.4.5
+      with:
+        cmakeVersion: '4.3.0'
+        ninjaVersion: '1.13.2'
+
+    - name: Set up MSVC
+      if: runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      with:
+        arch: x64
+
+    - name: Install mold (Linux)
+      if: runner.os == 'Linux'
+      uses: rui314/setup-mold@v1
+      with:
+        make-default: false
+
+    - name: Install OpenMP (macOS)
+      if: runner.os == 'macOS'
+      shell: bash
+      run: brew install libomp
+
+    - name: Set up ccache
+      if: runner.os != 'Windows'
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ inputs.cache-key }}-${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python-version }}
+        max-size: 500M

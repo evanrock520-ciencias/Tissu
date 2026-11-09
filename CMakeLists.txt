@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.29)
 
 if (POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
@@ -24,6 +24,23 @@ if (MSVC)
 endif ()
 
 include(FetchContent)
+include(CTest)
+
+# Older third-party projects still request policies removed by CMake 4.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum policy version for dependencies")
+
+option(TISSU_BUILD_BENCHMARKS "Build the solver benchmarks" ON)
+option(TISSU_BUILD_EXAMPLES "Build the C++ examples" ON)
+option(TISSU_USE_CCACHE "Cache C and C++ compilation with ccache" OFF)
+
+if (TISSU_USE_CCACHE)
+    find_program(CCACHE_EXECUTABLE ccache REQUIRED)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+endif ()
+
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+set(PYBIND11_FINDPYTHON ON)
 
 # Tissu Dependencies
 FetchContent_Declare(
@@ -79,11 +96,12 @@ FetchContent_Declare(
         alembic
         GIT_REPOSITORY https://github.com/alembic/alembic.git
         GIT_TAG 1.8.11
-        PATCH_COMMAND python "${CMAKE_SOURCE_DIR}/scripts/patch_alembic.py"
+        PATCH_COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/patch_alembic.py"
 )
 
 set(TINYOBJLOADER_INSTALL OFF CACHE BOOL "" FORCE)
 set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "" FORCE)
+set(EIGEN_BUILD_DOC OFF CACHE BOOL "" FORCE)
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -111,7 +129,18 @@ else ()
 endif ()
 
 
-FetchContent_MakeAvailable(googletest eigen tinyobjloader json pybind11 googlebenchmark imath alembic tracy)
+# BUILD_TESTING also controls Eigen's own suite; only enable Tissu's tests.
+set(_tissu_build_testing "${BUILD_TESTING}")
+set(BUILD_TESTING OFF)
+FetchContent_MakeAvailable(eigen tinyobjloader json pybind11 imath alembic tracy)
+set(BUILD_TESTING "${_tissu_build_testing}")
+unset(_tissu_build_testing)
+if (BUILD_TESTING)
+    FetchContent_MakeAvailable(googletest)
+endif ()
+if (TISSU_BUILD_BENCHMARKS)
+    FetchContent_MakeAvailable(googlebenchmark)
+endif ()
 
 if (TARGET Imath)
     target_include_directories(Imath INTERFACE
@@ -239,10 +268,15 @@ if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
     )
 endif ()
 
-enable_testing()
-add_subdirectory(tests)
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()
 
-add_subdirectory(benchmarks)
+if (TISSU_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif ()
 
-add_subdirectory(examples)
+if (TISSU_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
 

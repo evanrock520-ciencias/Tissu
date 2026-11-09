@@ -2,68 +2,95 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main, chore/update-ci]
   pull_request:
-    branches: [ main ]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: '2'
+  OMP_NUM_THREADS: '2'
+  MPLBACKEND: Agg
 
 jobs:
+  lint:
+    name: Code style
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Format Code
+        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16
+        with:
+          extra-args: --all-files
+
   build-and-test:
+    name: ${{ matrix.name }} / Release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             name: Linux
-          - os: macos-latest
+            preset: linux-release
+          - os: macos-14
             name: macOS
-          - os: windows-latest
+            preset: macos-release
+          - os: windows-2022
             name: Windows
-
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+            preset: windows-release
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          python-version: '3.12'
+          persist-credentials: false
 
-      - name: Install dependencies (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update
-          sudo apt install -y cmake build-essential libomp-dev git
-
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install cmake libomp git
-
-      - name: Install Python tools & Linters
-        run: |
-          python -m pip install prek mypy tqdm numpy matplotlib pytest imageio
-
-      - name: Run prek (Ruff & Clang-Format)
-        run: prek run --all-files
-
-      - name: Cache FetchContent dependencies
-        uses: actions/cache@v4
+      - name: Set up build tools
+        id: tools
+        uses: ./.github/actions/setup-build
         with:
-          path: build/_deps
-          key: fetchcontent-${{ runner.os }}-${{ hashFiles('CMakeLists.txt') }}
-          restore-keys: |
-            fetchcontent-${{ runner.os }}-
+          cache-key: ${{ matrix.preset }}
 
-      - name: Build
-        env:
-          CMAKE_BUILD_PARALLEL_LEVEL: 2
-        run: python scripts/build.py --no-viewer --no-tracy -j 2
+      - name: Install Python dependencies
+        run: uv pip install '.[dev]'
 
-      - name: Test
-        run: python scripts/test.py
+      - name: Build Project
+        uses: threeal/cmake-action@v2.1.0
+        with:
+          build-dir: build/${{ matrix.preset }}
+          args: --preset ${{ matrix.preset }}
+          options: |
+            "Python_EXECUTABLE=${{ steps.tools.outputs.python-path }}"
+            TISSU_BUILD_BENCHMARKS=${{ runner.os == 'Linux' && 'ON' || 'OFF' }}
 
-      - name: Build benchmarks
-        run: cmake --build build --target tissu_benchmarks --config Release -j 2
+      - name: Test C++
+        run: ctest --preset ${{ matrix.preset }} --output-junit cpp-tests.xml
+
+      - name: Test Python API
+        run: uv run --no-project python -m pytest tests/python --junitxml=build/python-tests.xml
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports-${{ matrix.preset }}
+          path: |
+            build/**/cpp-tests.xml
+            build/python-tests.xml
+            build/${{ matrix.preset }}/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 14
