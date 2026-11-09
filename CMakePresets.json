@@ -1,0 +1,311 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 29,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": true,
+        "TISSU_ENABLE_TRACY": false,
+        "TISSU_BUILD_BENCHMARKS": false,
+        "TISSU_BUILD_EXAMPLES": false,
+        "BUILD_TESTING": true,
+        "BENCHMARK_ENABLE_WERROR": false
+      }
+    },
+    {
+      "name": "headless-release",
+      "displayName": "Release without the OpenGL viewer",
+      "inherits": "base",
+      "cacheVariables": {
+        "TISSU_BUILD_VIEWER": false
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release with mold and ccache",
+      "inherits": "headless-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_LINKER_TYPE": "MOLD",
+        "TISSU_USE_CCACHE": true
+      }
+    },
+    {
+      "name": "macos-release",
+      "displayName": "macOS Release with ccache",
+      "inherits": "headless-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "TISSU_USE_CCACHE": true
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release with MSVC",
+      "inherits": "headless-release",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
+      }
+    },
+    {
+      "name": "viewer-release",
+      "displayName": "Release with the OpenGL viewer",
+      "inherits": "base",
+      "cacheVariables": {
+        "TISSU_BUILD_VIEWER": true
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Headless Debug build",
+      "inherits": "headless-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "benchmarks",
+      "displayName": "Headless Release benchmarks",
+      "inherits": "headless-release",
+      "cacheVariables": {
+        "BUILD_TESTING": false,
+        "TISSU_BUILD_BENCHMARKS": true
+      }
+    },
+    {
+      "name": "package",
+      "displayName": "Headless Python package build",
+      "inherits": "headless-release",
+      "cacheVariables": {
+        "BUILD_TESTING": false,
+        "TISSU_COPY_PYTHON_ARTIFACTS": false
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "headless-release",
+      "configurePreset": "headless-release"
+    },
+    {
+      "name": "linux-release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "macos-release",
+      "configurePreset": "macos-release"
+    },
+    {
+      "name": "windows-release",
+      "configurePreset": "windows-release"
+    },
+    {
+      "name": "viewer-release",
+      "configurePreset": "viewer-release"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "benchmarks",
+      "configurePreset": "benchmarks",
+      "targets": [
+        "tissu_benchmarks"
+      ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-base",
+      "hidden": true,
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "jobs": 1
+      },
+      "environment": {
+        "OMP_NUM_THREADS": "2"
+      }
+    },
+    {
+      "name": "headless-release",
+      "inherits": "test-base",
+      "configurePreset": "headless-release"
+    },
+    {
+      "name": "linux-release",
+      "inherits": "test-base",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "macos-release",
+      "inherits": "test-base",
+      "configurePreset": "macos-release"
+    },
+    {
+      "name": "windows-release",
+      "inherits": "test-base",
+      "configurePreset": "windows-release"
+    },
+    {
+      "name": "viewer-release",
+      "inherits": "test-base",
+      "configurePreset": "viewer-release"
+    },
+    {
+      "name": "debug",
+      "inherits": "test-base",
+      "configurePreset": "debug"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "headless-release",
+      "displayName": "Configure, build and test headless-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "headless-release"
+        },
+        {
+          "type": "build",
+          "name": "headless-release"
+        },
+        {
+          "type": "test",
+          "name": "headless-release"
+        }
+      ]
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Configure, build and test linux-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-release"
+        },
+        {
+          "type": "build",
+          "name": "linux-release"
+        },
+        {
+          "type": "test",
+          "name": "linux-release"
+        }
+      ]
+    },
+    {
+      "name": "macos-release",
+      "displayName": "Configure, build and test macos-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "macos-release"
+        },
+        {
+          "type": "build",
+          "name": "macos-release"
+        },
+        {
+          "type": "test",
+          "name": "macos-release"
+        }
+      ]
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Configure, build and test windows-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "windows-release"
+        },
+        {
+          "type": "build",
+          "name": "windows-release"
+        },
+        {
+          "type": "test",
+          "name": "windows-release"
+        }
+      ]
+    },
+    {
+      "name": "viewer-release",
+      "displayName": "Configure, build and test viewer-release",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "viewer-release"
+        },
+        {
+          "type": "build",
+          "name": "viewer-release"
+        },
+        {
+          "type": "test",
+          "name": "viewer-release"
+        }
+      ]
+    },
+    {
+      "name": "debug",
+      "displayName": "Configure, build and test debug",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "debug"
+        },
+        {
+          "type": "build",
+          "name": "debug"
+        },
+        {
+          "type": "test",
+          "name": "debug"
+        }
+      ]
+    },
+    {
+      "name": "benchmarks",
+      "displayName": "Configure and build benchmarks",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "benchmarks"
+        },
+        {
+          "type": "build",
+          "name": "benchmarks"
+        }
+      ]
+    }
+  ]
+}

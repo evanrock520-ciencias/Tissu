@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.29)
 
 if (POLICY CMP0135)
     cmake_policy(SET CMP0135 NEW)
@@ -24,6 +24,24 @@ if (MSVC)
 endif ()
 
 include(FetchContent)
+include(CTest)
+
+# Older third-party projects still request policies removed by CMake 4.
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "Minimum policy version for dependencies")
+
+option(TISSU_BUILD_BENCHMARKS "Build the solver benchmarks" ON)
+option(TISSU_BUILD_EXAMPLES "Build the C++ examples" ON)
+option(TISSU_USE_CCACHE "Cache C and C++ compilation with ccache" OFF)
+option(TISSU_COPY_PYTHON_ARTIFACTS "Copy native artifacts into the checkout for development" ON)
+
+if (TISSU_USE_CCACHE)
+    find_program(CCACHE_EXECUTABLE ccache REQUIRED)
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_EXECUTABLE}")
+endif ()
+
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+set(PYBIND11_FINDPYTHON ON)
 
 # Tissu Dependencies
 FetchContent_Declare(
@@ -49,6 +67,8 @@ FetchContent_Declare(
         eigen
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
         GIT_TAG 3.4.0
+        # Populate headers without configuring Eigen's BLAS/LAPACK projects.
+        SOURCE_SUBDIR tissu-headers-only
 )
 
 FetchContent_Declare(
@@ -66,7 +86,8 @@ FetchContent_Declare(
 FetchContent_Declare(
         pybind11
         GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG v2.13.6
+        GIT_TAG v3.1.0
+        FIND_PACKAGE_ARGS 3.1 CONFIG
 )
 
 FetchContent_Declare(
@@ -79,11 +100,10 @@ FetchContent_Declare(
         alembic
         GIT_REPOSITORY https://github.com/alembic/alembic.git
         GIT_TAG 1.8.11
-        PATCH_COMMAND python "${CMAKE_SOURCE_DIR}/scripts/patch_alembic.py"
+        PATCH_COMMAND "${Python_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/patch_alembic.py"
 )
 
 set(TINYOBJLOADER_INSTALL OFF CACHE BOOL "" FORCE)
-set(EIGEN_BUILD_PKGCONFIG OFF CACHE BOOL "" FORCE)
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -111,7 +131,25 @@ else ()
 endif ()
 
 
-FetchContent_MakeAvailable(googletest eigen tinyobjloader json pybind11 googlebenchmark imath alembic tracy)
+# Keep third-party tests separate from Tissu's own suite.
+set(_tissu_build_testing "${BUILD_TESTING}")
+set(BUILD_TESTING OFF)
+FetchContent_MakeAvailable(eigen tinyobjloader json pybind11 imath alembic tracy)
+set(BUILD_TESTING "${_tissu_build_testing}")
+unset(_tissu_build_testing)
+
+# Tissu uses Eigen as a header-only dependency. Eigen 3.4 unconditionally
+# configures BLAS/LAPACK, which can mix MinGW Fortran with MSVC on Windows.
+add_library(tissu_eigen INTERFACE)
+add_library(Eigen3::Eigen ALIAS tissu_eigen)
+target_include_directories(tissu_eigen SYSTEM INTERFACE "${eigen_SOURCE_DIR}")
+
+if (BUILD_TESTING)
+    FetchContent_MakeAvailable(googletest)
+endif ()
+if (TISSU_BUILD_BENCHMARKS)
+    FetchContent_MakeAvailable(googlebenchmark)
+endif ()
 
 if (TARGET Imath)
     target_include_directories(Imath INTERFACE
@@ -174,7 +212,7 @@ if (TISSU_BUILD_VIEWER)
     add_subdirectory(viewer)
 endif ()
 
-# Python bindings library 
+# Python bindings library
 if (TISSU_BUILD_VIEWER)
     pybind11_add_module(_cloth_sdk_core python/src/bindings.cpp)
     target_link_libraries(_cloth_sdk_core PRIVATE TissuCore ViewerCore)
@@ -189,60 +227,71 @@ set_target_properties(_cloth_sdk_core PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-# Python stubs
-find_program(STUBGEN_EXECUTABLE stubgen)
+if (TISSU_COPY_PYTHON_ARTIFACTS)
+    # Python stubs
+    find_program(STUBGEN_EXECUTABLE stubgen)
 
-if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
-    set(STUB_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_cloth_sdk_core.pyi)
+    if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
+        set(STUB_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/_cloth_sdk_core.pyi)
 
+        add_custom_command(
+                OUTPUT ${STUB_OUTPUT}
+                COMMAND ${CMAKE_COMMAND} -E rm -f ${STUB_OUTPUT}
+                COMMAND ${CMAKE_COMMAND} -E env
+                "PYTHONPATH=$<TARGET_FILE_DIR:_cloth_sdk_core>"
+                ${STUBGEN_EXECUTABLE}
+                -m _cloth_sdk_core
+                --output ${CMAKE_CURRENT_BINARY_DIR}
+                DEPENDS _cloth_sdk_core
+                WORKING_DIRECTORY $<TARGET_FILE_DIR:_cloth_sdk_core>
+                COMMENT "Generating Python stubs for _cloth_sdk_core"
+        )
+
+        add_custom_target(_cloth_sdk_core_stubs ALL DEPENDS ${STUB_OUTPUT})
+    endif ()
+
+    # Moving library
     add_custom_command(
-            OUTPUT ${STUB_OUTPUT}
-            COMMAND ${CMAKE_COMMAND} -E rm -f ${STUB_OUTPUT}
-            COMMAND ${CMAKE_COMMAND} -E env
-            "PYTHONPATH=$<TARGET_FILE_DIR:_cloth_sdk_core>"
-            ${STUBGEN_EXECUTABLE}
-            -m _cloth_sdk_core
-            --output ${CMAKE_CURRENT_BINARY_DIR}
-            DEPENDS _cloth_sdk_core
-            WORKING_DIRECTORY $<TARGET_FILE_DIR:_cloth_sdk_core>
-            COMMENT "Generating Python stubs for _cloth_sdk_core"
-    )
-
-    add_custom_target(_cloth_sdk_core_stubs ALL DEPENDS ${STUB_OUTPUT})
-endif ()
-
-# Moving library
-add_custom_command(
-        TARGET _cloth_sdk_core POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:_cloth_sdk_core>
-        ${CMAKE_SOURCE_DIR}/python/tissu/$<TARGET_FILE_NAME:_cloth_sdk_core>
-        COMMENT "Copying _cloth_sdk_core to python/tissu/"
-)
-
-add_custom_command(
-        TARGET _cloth_sdk_core POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE:_cloth_sdk_core>
-        ${CMAKE_SOURCE_DIR}/blender/libs/$<TARGET_FILE_NAME:_cloth_sdk_core>
-        COMMENT "Copying _cloth_sdk_core to blender/libs/"
-)
-
-# Moving stubs 
-if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
-    add_custom_command(
-            TARGET _cloth_sdk_core_stubs POST_BUILD
+            TARGET _cloth_sdk_core POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
-            ${STUB_OUTPUT}
-            ${CMAKE_SOURCE_DIR}/python/tissu/_cloth_sdk_core.pyi
-            COMMENT "Copying stubs to python/tissu/"
+            $<TARGET_FILE:_cloth_sdk_core>
+            ${CMAKE_SOURCE_DIR}/python/tissu/$<TARGET_FILE_NAME:_cloth_sdk_core>
+            COMMENT "Copying _cloth_sdk_core to python/tissu/"
     )
+
+    add_custom_command(
+            TARGET _cloth_sdk_core POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            $<TARGET_FILE:_cloth_sdk_core>
+            ${CMAKE_SOURCE_DIR}/blender/libs/$<TARGET_FILE_NAME:_cloth_sdk_core>
+            COMMENT "Copying _cloth_sdk_core to blender/libs/"
+    )
+
+    # Moving stubs
+    if (STUBGEN_EXECUTABLE AND NOT TISSU_BUILD_VIEWER)
+        add_custom_command(
+                TARGET _cloth_sdk_core_stubs POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy
+                ${STUB_OUTPUT}
+                ${CMAKE_SOURCE_DIR}/python/tissu/_cloth_sdk_core.pyi
+                COMMENT "Copying stubs to python/tissu/"
+        )
+    endif ()
 endif ()
 
-enable_testing()
-add_subdirectory(tests)
+# Only this component is installed into Python wheels by scikit-build-core.
+install(TARGETS _cloth_sdk_core
+        LIBRARY DESTINATION tissu COMPONENT python
+        RUNTIME DESTINATION tissu COMPONENT python)
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif ()
 
-add_subdirectory(benchmarks)
+if (TISSU_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif ()
 
-add_subdirectory(examples)
+if (TISSU_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif ()
 
