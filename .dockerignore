@@ -4,6 +4,11 @@ out/
 lib/
 dist/
 *.egg-info/
+CMakeUserPresets.json
+**/*.so
+**/*.pyd
+**/*.dll
+**/*.dylib
 
 .venv/
 venv/
