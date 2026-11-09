@@ -46,7 +46,7 @@ jobs:
           - os: ubuntu-24.04
             name: Linux
             preset: linux-release
-          - os: macos-14
+          - os: macos-15
             name: macOS
             preset: macos-release
           - os: windows-2022
