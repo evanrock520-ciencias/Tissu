@@ -4,21 +4,21 @@
 
 ## Supported Python Versions and Platforms
 
-The PyPI version of Tissu is available for Linux in headless mode. You can install it using pip:
+Tissu 1.1.0 provides headless wheels for CPython 3.10–3.14. You can install it using pip:
 
 ```bash
 pip install pytissu
 ```
 
-For the PyPI version of Tissu, the following Python versions and platforms are supported:
+The uploaded wheels for version 1.1.0 have the following compatibility:
 
-| Python Version | Platform | Status |
-|----------------|----------|--------|
-| 3.12           | Linux    | ✅      |
-| 3.13           | Linux    | ✅      |
-| 3.14           | Linux    | ✅      |
+| Python versions | Platform | Minimum OS requirement |
+|-----------------|----------|------------------------|
+| 3.10–3.14       | Linux x86_64 | glibc 2.39 (`manylinux_2_39`) |
+| 3.10–3.14       | Windows AMD64 | 64-bit Windows |
+| 3.10–3.14       | macOS ARM64 | macOS 26.0 |
 
-Currently, to run Tissu on Windows and macOS or with viewer support, you need to build it from source and then run:
+For platforms without a matching wheel, or for viewer support, build from source:
 
 ```bash
 pip install -e .

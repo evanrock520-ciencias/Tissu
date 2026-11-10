@@ -103,6 +103,10 @@ venvPath = "."
 venv = ".venv"
 
 [dependency-groups]
+docs = [
+    "mkdocs>=1.6,<2",
+    "mkdocs-material>=9.6,<10",
+]
 dev = [
     "fake-bpy-module-latest>=20260722",
 ]

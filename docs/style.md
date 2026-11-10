@@ -57,7 +57,7 @@ Key formatting rules include:
 - Indentation of **4 spaces**.
 - Double quotes (`"..."`) for strings.
 - Line length limit of **120 characters**.
-- The target version is **Python 3.12** or higher.
+- The target version is **Python 3.10** or higher.
 - Strict use of **Type Hinting** (e.g., `substeps: int = 10`), including `from __future__ import annotations` at the top
   of files for forward references.
 

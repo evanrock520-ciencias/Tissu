@@ -1,24 +1,69 @@
 site_name: Tissu
+site_description: A C++ cloth simulation SDK with a Python API.
+site_url: https://evanrock520-ciencias.github.io/Tissu/
+repo_url: https://github.com/evanrock520-ciencias/Tissu
+repo_name: evanrock520-ciencias/Tissu
+edit_uri: edit/main/docs/
+
+strict: true
 
 theme:
   name: material
+  language: en
+  font: false
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+
+plugins:
+  - search
 
 markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.superfences
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
 
 extra_javascript:
   - javascripts/mathjax.js
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js
+
+# These pages are placeholders and are intentionally outside this publication.
+exclude_docs: |
+  /blender/
+  /python/events.md
+
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    unrecognized_links: warn
 
 nav:
   - Home: index.md
-  - Physics & Math: core/physics_and_math.md
-  - Optimization: core/optimization.md
-  - Architecture: core/architecture.md
-  - Build And Development: core/build_and_development.md
-  - Python API: python/index.md
+  - Getting started: getting_started.md
+  - Python API:
+      - Installation and compatibility: python/index.md
+      - Simulation reference: python/simulation.md
+  - Core reference:
+      - Architecture: core/architecture.md
+      - Physics and math: core/physics_and_math.md
+      - Optimization: core/optimization.md
+      - File formats: core/formats.md
   - CLI: cli/cli.md
-  - Blender: blender/addon.md
+  - Development:
+      - Build and development: core/build_and_development.md
+      - Code style: style.md
+      - Documentation: documentation.md

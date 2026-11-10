@@ -1,15 +1,31 @@
-# Tissu Docs
+# Tissu
 
-This is the documentation for Tissu.
+Tissu is a cloth simulation SDK with a C++17 core and a Python API. Use Python
+to create cloth meshes, configure materials and colliders, run simulations, and
+export geometry or Alembic animations.
 
-## Index
+[Get started](getting_started.md){ .md-button .md-button--primary }
+[Python API](python/index.md){ .md-button }
 
-[1. Physics and Math](core/physics_and_math.md)
+## Start here
 
-[2. Architecture](core/architecture.md)
+- **First simulation:** [install Tissu and export a cloth mesh](getting_started.md).
+- **Python scripting:** consult [compatibility](python/index.md) and the
+  [Simulation reference](python/simulation.md).
+- **Native development:** follow the [build guide](core/build_and_development.md)
+  for CMake presets, tests and packaging.
+- **Command line:** see the [CLI guide](cli/cli.md) for the separate `tissu-cli`
+  project.
 
-[3. Python API](python/index.md)
+## Explore the core
 
-[4. Blender Add-on](blender/addon.md)
+The existing technical reference covers [architecture](core/architecture.md),
+[physics and math](core/physics_and_math.md),
+[optimization](core/optimization.md), and [file formats](core/formats.md).
 
-[5. Build and Develops](core/build_and_development.md)
+## Project links
+
+- [Source code and releases](https://github.com/evanrock520-ciencias/Tissu)
+- [Python package on PyPI](https://pypi.org/project/pytissu/)
+- [Report an issue](https://github.com/evanrock520-ciencias/Tissu/issues)
+- [Preview and contribute to these docs](documentation.md)
