@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Format Code
-        uses: j178/prek-action@5337cb91e0fa35a7ff31b9ca345126d8bbbcdf16
+        uses: j178/prek-action@44924fe9ef4a6f88253c4b6b1bf11c689d3ce53d
         with:
           extra-args: --all-files
 
